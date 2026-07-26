@@ -1,0 +1,145 @@
+services:
+  # ── PostgreSQL ──────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: sipon-api_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: "${DB_USER:-sipon}"
+      POSTGRES_PASSWORD: "${DB_PASS:-secret}"
+      POSTGRES_DB: "${DB_NAME:-sipon}"
+    ports:
+      - "${DB_EXPOSE_PORT:-5432}:${DB_PORT:-5432}"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${DB_USER:-sipon} -d ${DB_NAME:-sipon}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - sipon-net
+
+  # ── Redis (Cache / Session Revocation) ───────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: sipon-api_redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_EXPOSE_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - sipon-net
+
+  # ── App (HTTP server) ────────────────────────────────────────────────────────
+  app:
+    image: golang:1.25-alpine
+    container_name: sipon-api_app
+    restart: unless-stopped
+    env_file: .env
+    working_dir: /workspace
+    command: ["go", "run", "./cmd/app"]
+    ports:
+      - "${APP_EXPOSE_PORT:-8080}:${APP_PORT:-8080}"
+    volumes:
+      - .:/workspace
+      - go_mod_cache:/go/pkg/mod
+      - go_build_cache:/root/.cache/go-build
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - sipon-net
+
+  # ── Migrate (one-shot) ───────────────────────────────────────────────────────
+  migrate:
+    image: golang:1.25-alpine
+    container_name: sipon-api_migrate
+    env_file: .env
+    working_dir: /workspace
+    entrypoint: ["go", "run", "./cmd/migrate"]
+    volumes:
+      - .:/workspace
+      - ./internal/migrations:/workspace/internal/migrations:ro
+      - go_mod_cache:/go/pkg/mod
+      - go_build_cache:/root/.cache/go-build
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - sipon-net
+    profiles:
+      - tooling
+
+  # ── Seeder (one-shot) ───────────────────────────────────────────────────────
+  seeder:
+    image: golang:1.25-alpine
+    container_name: sipon-api_seeder
+    env_file: .env
+    working_dir: /workspace
+    entrypoint: ["go", "run", "./cmd/seeder"]
+    volumes:
+      - .:/workspace
+      - go_mod_cache:/go/pkg/mod
+      - go_build_cache:/root/.cache/go-build
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - sipon-net
+    profiles:
+      - tooling
+
+  # ── Devtools (swagger/codegen) ─────────────────────────────────────────────
+  devtools:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: devtools
+    container_name: sipon-api_devtools
+    working_dir: /workspace
+    volumes:
+      - .:/workspace
+      - go_mod_cache:/go/pkg/mod
+      - go_build_cache:/root/.cache/go-build
+    profiles:
+      - tooling
+    networks:
+      - sipon-net
+
+volumes:
+  postgres_data:
+  redis_data:
+  go_mod_cache:
+  go_build_cache:
+
+networks:
+  sipon-net:
+    driver: bridge

@@ -1,0 +1,251 @@
+### Variabel dasar — ganti sesuai environment kamu
+@baseUrl = http://localhost:8800
+@identifier = usergod@sipon.dev
+@password = Usergod1234
+
+### ─────────────────────────────────────────────────────────────────────────
+### AUTH — register, login, session
+### Setiap request yang diberi "# @name <nama>" bisa direferensikan lagi di
+### request selanjutnya via {{<nama>.response.body.$.<json.path>}} — token
+### dari response login/register otomatis "tersimpan" untuk request berikut,
+### tidak perlu copy-paste manual. (Butuh ekstensi REST Client di VS Code.)
+### ─────────────────────────────────────────────────────────────────────────
+
+### Register user baru
+# @name register
+POST {{baseUrl}}/api/v1/web/auth/register
+Content-Type: application/json
+
+{
+  "username": "tester1",
+  "email": "tester1@sipon.dev",
+  "password": "Secret123!"
+}
+
+### Login — simpan token dari sini untuk dipakai di request-request di bawah.
+# @name login
+POST {{baseUrl}}/api/v1/web/auth/login
+Content-Type: application/json
+
+{
+  "identifier": "{{identifier}}",
+  "password": "{{password}}"
+}
+
+@accessToken = {{login.response.body.$.data.token}}
+@refreshToken = {{login.response.body.$.data.refresh_token}}
+
+### Cek token tersimpan (opsional, bisa dihapus)
+GET {{baseUrl}}/health
+
+### Session bootstrap — pakai token hasil login di atas
+GET {{baseUrl}}/api/v1/auth/session
+Authorization: Bearer {{accessToken}}
+
+### Profil user saat ini
+GET {{baseUrl}}/api/v1/web/auth/me
+Authorization: Bearer {{accessToken}}
+
+### Refresh token — hasil access token baru otomatis ter-update juga
+# @name refresh
+POST {{baseUrl}}/api/v1/web/auth/refresh-token
+Content-Type: application/json
+
+{
+  "refresh_token": "{{refreshToken}}"
+}
+
+### Logout (revoke session token yang sedang dipakai)
+POST {{baseUrl}}/api/v1/auth/logout
+Authorization: Bearer {{accessToken}}
+
+### ─────────────────────────────────────────────────────────────────────────
+### AUTH — password & identity management (butuh token, lihat @accessToken)
+### ─────────────────────────────────────────────────────────────────────────
+
+### Ganti password (wajib kirim password lama)
+POST {{baseUrl}}/api/v1/web/auth/change-password
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "current_password": "{{password}}",
+  "new_password": "NewSecret456!"
+}
+
+### Set password pertama kali (akun yang belum pernah punya password lokal)
+POST {{baseUrl}}/api/v1/web/auth/set-password
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "new_password": "NewSecret456!"
+}
+
+### Minta OTP verifikasi identity (email/no hp)
+POST {{baseUrl}}/api/v1/web/auth/request-otp
+Content-Type: application/json
+
+{
+  "identifier": "{{identifier}}"
+}
+
+### Verifikasi OTP identity — ganti "123456" dengan kode asli dari email/SMS/DB
+POST {{baseUrl}}/api/v1/web/auth/verify-otp
+Content-Type: application/json
+
+{
+  "identifier": "{{identifier}}",
+  "otp": "123456"
+}
+
+### Lupa password — kirim OTP reset ke email
+POST {{baseUrl}}/api/v1/web/auth/password/forgot
+Content-Type: application/json
+
+{
+  "email": "{{identifier}}"
+}
+
+### Reset password pakai OTP — ganti "123456" dengan kode asli dari email/DB
+POST {{baseUrl}}/api/v1/web/auth/password/reset
+Content-Type: application/json
+
+{
+  "email": "{{identifier}}",
+  "token": "123456",
+  "password": "NewSecret456!"
+}
+
+### Minta ganti email — OTP dikirim ke email baru
+POST {{baseUrl}}/api/v1/web/auth/change-email/request
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "new_email": "tester1-new@sipon.dev"
+}
+
+### Konfirmasi ganti email — ganti "123456" dengan OTP asli
+POST {{baseUrl}}/api/v1/web/auth/change-email/confirm
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "otp": "123456"
+}
+
+### Minta ganti no HP — OTP dikirim ke no baru
+POST {{baseUrl}}/api/v1/web/auth/change-phone/request
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "new_phone": "081234567890"
+}
+
+### Konfirmasi ganti no HP — ganti "123456" dengan OTP asli
+POST {{baseUrl}}/api/v1/web/auth/change-phone/confirm
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "otp": "123456"
+}
+
+### ─────────────────────────────────────────────────────────────────────────
+### ROLE & PERMISSION (admin) — semua butuh role superadmin/usergod.
+### Login pakai @identifier/@password di atas (default: akun bootstrap
+### usergod@sipon.dev hasil `make seed-role` / `make seed-all`).
+### ─────────────────────────────────────────────────────────────────────────
+
+### List roles
+GET {{baseUrl}}/api/v1/web/role-permission/roles
+Authorization: Bearer {{accessToken}}
+
+### Buat role custom baru
+# @name createRole
+POST {{baseUrl}}/api/v1/web/role-permission/roles
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "name": "editor",
+  "display_name": "Editor",
+  "role_type": "custom",
+  "scope_type": "global",
+  "assignable": true
+}
+
+@roleId = {{createRole.response.body.$.data.id}}
+
+### Detail role — pakai roleId hasil create di atas
+GET {{baseUrl}}/api/v1/web/role-permission/roles/{{roleId}}
+Authorization: Bearer {{accessToken}}
+
+### Update role
+PUT {{baseUrl}}/api/v1/web/role-permission/roles/{{roleId}}
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "display_name": "Editor (updated)"
+}
+
+### ─────────────────────────────────────────────────────────────────────────
+### PERMISSION per role — permission KEY didefinisikan di kode (constant), tapi
+### assignment ke role CUSTOM disimpan di DB & bisa diatur lewat endpoint ini.
+### Role SYSTEM (usergod/superadmin/admin/member) menolak assign/revoke di sini
+### (409) — permission-nya fixed di internal/domain/role/constant.
+### ─────────────────────────────────────────────────────────────────────────
+
+### Katalog permission key yang valid (dari kode, bukan DB)
+GET {{baseUrl}}/api/v1/web/role-permission/permission-keys
+Authorization: Bearer {{accessToken}}
+
+### Assign permission ke role custom — pakai roleId hasil create di atas
+POST {{baseUrl}}/api/v1/web/role-permission/roles/{{roleId}}/permissions
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "permission_key": "manage_users"
+}
+
+### Revoke permission dari role custom
+DELETE {{baseUrl}}/api/v1/web/role-permission/roles/{{roleId}}/permissions/manage_users
+Authorization: Bearer {{accessToken}}
+
+### List user-role assignment
+GET {{baseUrl}}/api/v1/web/role-permission/user-roles
+Authorization: Bearer {{accessToken}}
+
+### Assign role ke user — ganti user_id dengan ID user target (lihat response register di atas)
+# @name assignUserRole
+POST {{baseUrl}}/api/v1/web/role-permission/user-roles
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "user_id": "{{register.response.body.$.data.user_id}}",
+  "role_id": "{{roleId}}",
+  "scope_type": "global"
+}
+
+@userRoleId = {{assignUserRole.response.body.$.data.id}}
+
+### Detail user-role
+GET {{baseUrl}}/api/v1/web/role-permission/user-roles/{{userRoleId}}
+Authorization: Bearer {{accessToken}}
+
+### Nonaktifkan user-role
+POST {{baseUrl}}/api/v1/web/role-permission/user-roles/{{userRoleId}}/deactivate
+Authorization: Bearer {{accessToken}}
+
+### Aktifkan lagi user-role
+POST {{baseUrl}}/api/v1/web/role-permission/user-roles/{{userRoleId}}/reactivate
+Authorization: Bearer {{accessToken}}
+
+### Hapus user-role
+DELETE {{baseUrl}}/api/v1/web/role-permission/user-roles/{{userRoleId}}
+Authorization: Bearer {{accessToken}}
