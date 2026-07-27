@@ -117,6 +117,54 @@ func (q *PostgresUserQuery) ListActiveRoleSummariesByUserID(ctx context.Context,
 	return items, nil
 }
 
+// ListActiveRoleSummariesByUserIDs batch query — mengambil ringkasan role aktif
+// untuk banyak user sekaligus dengan satu SQL query (WHERE user_id IN (...)).
+func (q *PostgresUserQuery) ListActiveRoleSummariesByUserIDs(ctx context.Context, userIDs []string) (map[string][]port.UserRoleSummaryReadItem, error) {
+	result := make(map[string][]port.UserRoleSummaryReadItem)
+	if len(userIDs) == 0 {
+		return result, nil
+	}
+
+	placeholders := make([]string, 0, len(userIDs))
+	args := make([]any, 0, len(userIDs))
+	for i, uid := range userIDs {
+		placeholders = append(placeholders, fmt.Sprintf("$%d", i+1))
+		args = append(args, uid)
+	}
+
+	query := fmt.Sprintf(`
+		SELECT ur.id, ur.role_id, r.name, ur.scope_type, ur.scope_id, ur.is_active, ur.user_id
+		FROM user_roles ur
+		INNER JOIN roles r ON r.id = ur.role_id
+		WHERE ur.user_id IN (%s)
+		  AND ur.is_active = TRUE
+		  AND (ur.expired_at IS NULL OR ur.expired_at > NOW())
+		ORDER BY ur.assigned_at DESC`, strings.Join(placeholders, ", "))
+
+	rows, err := execFromContext(ctx, q.db).QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("batch query user role summaries: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var scopeID sql.NullString
+		var item port.UserRoleSummaryReadItem
+		var uid string
+		if err := rows.Scan(&item.ID, &item.RoleID, &item.RoleName, &item.ScopeType, &scopeID, &item.IsActive, &uid); err != nil {
+			return nil, fmt.Errorf("scan batch user role summary: %w", err)
+		}
+		if scopeID.Valid {
+			item.ScopeID = &scopeID.String
+		}
+		result[uid] = append(result[uid], item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate batch user role summaries: %w", err)
+	}
+	return result, nil
+}
+
 // ── Scan Helpers ──────────────────────────────────────────────────────────────
 
 func scanUserReadItem(scanner interface{ Scan(dest ...any) error }) (port.UserReadItem, error) {

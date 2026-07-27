@@ -49,4 +49,7 @@ type UserQueryReadModel interface {
 	ListUsers(ctx context.Context, query UserListReadQuery) ([]UserReadItem, dto.Meta, error)
 	// ListActiveRoleSummariesByUserID mengembalikan assignment role aktif user.
 	ListActiveRoleSummariesByUserID(ctx context.Context, userID string) ([]UserRoleSummaryReadItem, error)
+	// ListActiveRoleSummariesByUserIDs batch query untuk banyak user sekaligus,
+	// menghindari N+1 pada user listing. Mengembalikan map[userID][]summary.
+	ListActiveRoleSummariesByUserIDs(ctx context.Context, userIDs []string) (map[string][]UserRoleSummaryReadItem, error)
 }

@@ -33,6 +33,7 @@ func (uc *ListUsersUseCase) Execute(ctx context.Context, req dto.ListUsersQuery)
 		return nil, dto.Meta{}, apperror.Internal(string(apperror.CodeInternal), err)
 	}
 	items := make([]dto.UserManagementResponse, 0, len(result))
+	userIDs := make([]string, 0, len(result))
 	for _, item := range result {
 		var phone *string
 		if item.Phone != nil && *item.Phone != "" {
@@ -49,8 +50,32 @@ func (uc *ListUsersUseCase) Execute(ctx context.Context, req dto.ListUsersQuery)
 			CreatedAt:   item.CreatedAt,
 			UpdatedAt:   item.UpdatedAt,
 			LastLoginAt: item.LastLoginAt,
-			// Roles sengaja tidak diisi pada listing (N+1). Di-load hanya get-by-id.
 		})
+		userIDs = append(userIDs, item.ID)
 	}
+
+	// Batch fetch active role summaries untuk semua user dalam satu query.
+	if len(userIDs) > 0 {
+		roleMap, err := uc.readModel.ListActiveRoleSummariesByUserIDs(ctx, userIDs)
+		if err != nil {
+			return nil, dto.Meta{}, apperror.Internal(string(apperror.CodeInternal), err)
+		}
+		for i := range items {
+			if roles, ok := roleMap[items[i].ID]; ok {
+				items[i].Roles = make([]dto.UserRoleSummaryResponse, 0, len(roles))
+				for _, r := range roles {
+					items[i].Roles = append(items[i].Roles, dto.UserRoleSummaryResponse{
+						ID:        r.ID,
+						RoleID:    r.RoleID,
+						RoleName:  r.RoleName,
+						ScopeType: r.ScopeType,
+						ScopeID:   r.ScopeID,
+						IsActive:  r.IsActive,
+					})
+				}
+			}
+		}
+	}
+
 	return items, meta, nil
 }
