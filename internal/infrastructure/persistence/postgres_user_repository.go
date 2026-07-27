@@ -3,8 +3,11 @@ package persistence
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"strings"
 	"time"
+
+	"github.com/jackc/pgx/v5/pgconn"
 
 	domainerr "sipon-api/internal/domain/errors"
 	userConstant "sipon-api/internal/domain/user/constant"
@@ -38,6 +41,10 @@ func (r *PostgresUserRepository) Save(ctx context.Context, user *entity.User) er
 		string(user.Status), user.CreatedAt, user.UpdatedAt, user.LastLoginAt, user.DeletedAt,
 	)
 	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return domainerr.New(userConstant.CodeUserDuplicate)
+		}
 		return domainerr.Wrap(userConstant.CodeUserPersistenceFailed, err)
 	}
 
@@ -123,13 +130,17 @@ func (r *PostgresUserRepository) Update(ctx context.Context, user *entity.User) 
 		phone = &v
 	}
 
-	_, err := execFromContext(ctx, r.db).ExecContext(ctx, `
-		UPDATE users SET fullname=$1, email=$2, phone=$3, status=$4, updated_at=$5, last_login_at=$6, deleted_at=$7,
-		failed_login_attempts=$8, locked_until=$9 WHERE id=$10`,
+_, err := execFromContext(ctx, r.db).ExecContext(ctx, `
+	UPDATE users SET fullname=$1, email=$2, phone=$3, status=$4, updated_at=$5, last_login_at=$6, deleted_at=$7,
+	failed_login_attempts=$8, locked_until=$9 WHERE id=$10`,
 		user.Fullname, user.Email.Value(), phone, string(user.Status), user.UpdatedAt, user.LastLoginAt, user.DeletedAt,
 		user.FailedLoginAttempts, user.LockedUntil, user.ID,
 	)
 	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return domainerr.New(userConstant.CodeUserDuplicate)
+		}
 		return domainerr.Wrap(userConstant.CodeUserPersistenceFailed, err)
 	}
 
@@ -403,23 +414,27 @@ func (r *PostgresUserRepository) persistCredentials(ctx context.Context, user *e
 
 func (r *PostgresUserRepository) persistLoginIdentitiesForCredential(ctx context.Context, cred *entity.Credential) error {
 	for _, identity := range cred.LoginIdentities {
-		_, err := execFromContext(ctx, r.db).ExecContext(ctx, `
-			INSERT INTO user_identities (id, user_id, credential_id, kind, value, status, is_primary, verified_at, created_at, updated_at, deleted_at)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-			ON CONFLICT (id) DO UPDATE SET
-				value = EXCLUDED.value,
-				status = EXCLUDED.status,
-				is_primary = EXCLUDED.is_primary,
-				verified_at = EXCLUDED.verified_at,
-				updated_at = EXCLUDED.updated_at,
-				deleted_at = EXCLUDED.deleted_at`,
-			identity.ID, identity.UserID, identity.CredentialID, string(identity.Kind), identity.Value,
-			string(identity.Status), identity.IsPrimary,
-			identity.VerifiedAt, identity.CreatedAt, identity.UpdatedAt, identity.DeletedAt,
-		)
-		if err != nil {
-			return domainerr.Wrap(userConstant.CodeUserPersistenceFailed, err)
+_, err := execFromContext(ctx, r.db).ExecContext(ctx, `
+		INSERT INTO user_identities (id, user_id, credential_id, kind, value, status, is_primary, verified_at, created_at, updated_at, deleted_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+		ON CONFLICT (id) DO UPDATE SET
+			value = EXCLUDED.value,
+			status = EXCLUDED.status,
+			is_primary = EXCLUDED.is_primary,
+			verified_at = EXCLUDED.verified_at,
+			updated_at = EXCLUDED.updated_at,
+			deleted_at = EXCLUDED.deleted_at`,
+		identity.ID, identity.UserID, identity.CredentialID, string(identity.Kind), identity.Value,
+		string(identity.Status), identity.IsPrimary,
+		identity.VerifiedAt, identity.CreatedAt, identity.UpdatedAt, identity.DeletedAt,
+	)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return domainerr.New(userConstant.CodeUserDuplicate)
 		}
+		return domainerr.Wrap(userConstant.CodeUserPersistenceFailed, err)
+	}
 	}
 	return nil
 }

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"sipon-api/internal/app/port"
+	roleconstant "sipon-api/internal/domain/role/constant"
 	"sipon-api/internal/app/service/principal"
 	"sipon-api/internal/config"
 	webhandler "sipon-api/internal/interfaces/http/handler/web"
@@ -20,6 +21,7 @@ import (
 func Setup(
 	webAuthHandler *webhandler.AuthHandler,
 	webRolePermissionHandler *webhandler.RolePermissionHandler,
+	webUserManagementHandler *webhandler.UserManagementHandler,
 	tokenGen port.TokenGenerator,
 	sessionRevocationStore port.SessionRevocationStore,
 	principalBuilder *principal.Builder,
@@ -98,24 +100,56 @@ func Setup(
 		protectedWeb.POST("/auth/change-phone/request", webAuthHandler.RequestChangePhone)
 		protectedWeb.POST("/auth/change-phone/confirm", webAuthHandler.ConfirmChangePhone)
 
-		rolePermission := protectedWeb.Group("/role-permission", middleware.RequireRole("superadmin", "usergod"))
+		// ── User Management ───────────────────────────────────────────────────
+		// Dibawah /api/v1/web/users. Tiap route dipasangkan guard RequirePermission
+		// per spesifik plan §7 — admin (manage_users/reset_user_password/
+		// deactivate_user) terlihat, superadmin/usergod punya semua.
+		users := protectedWeb.Group("/users")
 		{
-			rolePermission.GET("/roles", webRolePermissionHandler.ListRoles)
-			rolePermission.GET("/roles/:role_id", webRolePermissionHandler.GetRole)
-			rolePermission.POST("/roles", webRolePermissionHandler.CreateRole)
-			rolePermission.PUT("/roles/:role_id", webRolePermissionHandler.UpdateRole)
+			users.GET("", middleware.RequirePermission(string(roleconstant.PermissionManageUsers)), webUserManagementHandler.ListUsers)
+			users.GET("/:user_id", middleware.RequirePermission(string(roleconstant.PermissionManageUsers)), webUserManagementHandler.GetUser)
+			users.POST("", middleware.RequirePermission(string(roleconstant.PermissionManageUsers)), webUserManagementHandler.CreateUser)
+			users.POST("/:user_id/reset-password", middleware.RequirePermission(string(roleconstant.PermissionResetUserPassword)), webUserManagementHandler.ResetUserPassword)
+			users.POST("/:user_id/deactivate", middleware.RequirePermission(string(roleconstant.PermissionDeactivateUser)), webUserManagementHandler.DeactivateUser)
+			users.POST("/:user_id/reactivate", middleware.RequirePermission(string(roleconstant.PermissionDeactivateUser)), webUserManagementHandler.ReactivateUser)
+		}
 
-			rolePermission.GET("/permission-keys", webRolePermissionHandler.ListPermissionKeys)
-			rolePermission.POST("/roles/:role_id/permissions", webRolePermissionHandler.AssignRolePermission)
-			rolePermission.DELETE("/roles/:role_id/permissions/:permission_key", webRolePermissionHandler.RevokeRolePermission)
+		// ── Role & Permission Management ──────────────────────────────────────
+		// Sebelumnya ditutup dengan blanket RequireRole("superadmin","usergod"),
+		// yang membuat admin — padahal RolePermissions-nya termasuk assign_role —
+		// tidak bisa mencapai route assign-role (latent bug, lihat
+		// docs/plans/system-management-module.md §Context). Sekarang tiap route
+		// pakai RequirePermission granular.
+		rolePermission := protectedWeb.Group("/role-permission")
+		{
+			readRoleGuard := middleware.RequirePermission(
+				string(roleconstant.PermissionManageRoles),
+				string(roleconstant.PermissionManageRolePermissions),
+				string(roleconstant.PermissionAssignRole),
+			)
+			rolePermission.GET("/roles", readRoleGuard, webRolePermissionHandler.ListRoles)
+			rolePermission.GET("/roles/:role_id", readRoleGuard, webRolePermissionHandler.GetRole)
+			rolePermission.GET("/permission-keys", readRoleGuard, webRolePermissionHandler.ListPermissionKeys)
 
-			rolePermission.GET("/user-roles", webRolePermissionHandler.ListUserRoles)
-			rolePermission.GET("/user-roles/:user_role_id", webRolePermissionHandler.GetUserRole)
-			rolePermission.POST("/user-roles", webRolePermissionHandler.AssignUserRole)
-			rolePermission.PUT("/user-roles/:user_role_id", webRolePermissionHandler.UpdateUserRole)
-			rolePermission.POST("/user-roles/:user_role_id/deactivate", webRolePermissionHandler.DeactivateUserRole)
-			rolePermission.POST("/user-roles/:user_role_id/reactivate", webRolePermissionHandler.ReactivateUserRole)
-			rolePermission.DELETE("/user-roles/:user_role_id", webRolePermissionHandler.DeleteUserRole)
+			rolePermission.POST("/roles", middleware.RequirePermission(string(roleconstant.PermissionManageRoles)), webRolePermissionHandler.CreateRole)
+			rolePermission.PUT("/roles/:role_id", middleware.RequirePermission(string(roleconstant.PermissionManageRoles)), webRolePermissionHandler.UpdateRole)
+
+			rolePermission.POST("/roles/:role_id/permissions", middleware.RequirePermission(string(roleconstant.PermissionManageRolePermissions)), webRolePermissionHandler.AssignRolePermission)
+			rolePermission.DELETE("/roles/:role_id/permissions/:permission_key", middleware.RequirePermission(string(roleconstant.PermissionManageRolePermissions)), webRolePermissionHandler.RevokeRolePermission)
+
+			userRoleReadGuard := middleware.RequirePermission(
+				string(roleconstant.PermissionAssignRole),
+				string(roleconstant.PermissionManageUsers),
+			)
+			userRoleWriteGuard := middleware.RequirePermission(string(roleconstant.PermissionAssignRole))
+
+			rolePermission.GET("/user-roles", userRoleReadGuard, webRolePermissionHandler.ListUserRoles)
+			rolePermission.GET("/user-roles/:user_role_id", userRoleReadGuard, webRolePermissionHandler.GetUserRole)
+			rolePermission.POST("/user-roles", userRoleWriteGuard, webRolePermissionHandler.AssignUserRole)
+			rolePermission.PUT("/user-roles/:user_role_id", userRoleWriteGuard, webRolePermissionHandler.UpdateUserRole)
+			rolePermission.POST("/user-roles/:user_role_id/deactivate", userRoleWriteGuard, webRolePermissionHandler.DeactivateUserRole)
+			rolePermission.POST("/user-roles/:user_role_id/reactivate", userRoleWriteGuard, webRolePermissionHandler.ReactivateUserRole)
+			rolePermission.DELETE("/user-roles/:user_role_id", userRoleWriteGuard, webRolePermissionHandler.DeleteUserRole)
 		}
 	}
 

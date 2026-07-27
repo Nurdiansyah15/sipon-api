@@ -19,6 +19,7 @@ import (
 	"sipon-api/internal/app/service/principal"
 	authUsecase "sipon-api/internal/app/usecase/auth"
 	rolePermissionUsecase "sipon-api/internal/app/usecase/rolepermission"
+	userManagementUsecase "sipon-api/internal/app/usecase/usermanagement"
 	"sipon-api/internal/config"
 	"sipon-api/internal/infrastructure/cache"
 	"sipon-api/internal/infrastructure/external/bcrypt"
@@ -72,6 +73,7 @@ func main() {
 	userRoleRepo := persistence.NewPostgresUserRoleRepository(db)
 	rolePermissionRepo := persistence.NewPostgresRolePermissionRepository(db)
 	rolePermissionReadModel := persistence.NewPostgresRoleQuery(db)
+	userReadModel := persistence.NewPostgresUserQuery(db)
 
 	// ── Infrastructure: external services ────────────────────────────────────
 	hasher := bcrypt.NewBcryptPasswordHasher()
@@ -134,6 +136,12 @@ func main() {
 		ReadModel:          rolePermissionReadModel,
 	})
 
+	userManagementUseCases := userManagementUsecase.NewUseCases(userManagementUsecase.Dependencies{
+		UserRepo:  userRepo,
+		ReadModel: userReadModel,
+		Hasher:    hasher,
+	})
+
 	// ── Principal builder & cache ─────────────────────────────────────────────
 	principalCache := cache.NewRedisPrincipalCache(redisClient)
 	rateLimiter := cache.NewRedisRateLimiter(redisClient)
@@ -142,9 +150,10 @@ func main() {
 	// ── Interface: HTTP handler & router ──────────────────────────────────────
 	webAuthHandler := webhandler.NewAuthHandler(registerUC, loginUC, refreshTokenUC, changePasswordLocalUC, setPasswordLocalUC, requestIdentityOTPUC, verifyIdentityOTPUC, meUC, forgotPasswordUC, resetPasswordUC, requestChangeIdentityUC, confirmChangeIdentityUC, getSessionUC, logoutUC)
 	webRolePermissionHandler := webhandler.NewRolePermissionHandler(rolePermissionUseCases)
+	webUserManagementHandler := webhandler.NewUserManagementHandler(userManagementUseCases)
 
 	engine := router.Setup(
-		webAuthHandler, webRolePermissionHandler,
+		webAuthHandler, webRolePermissionHandler, webUserManagementHandler,
 		tokenGen, sessionRevocationStore, principalBuilder, principalCache,
 		rateLimiter, cfg.RateLimit, cfg.App.Env, logger,
 	)

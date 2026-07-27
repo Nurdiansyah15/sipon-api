@@ -14,9 +14,13 @@ import "sort"
 type PermissionKey string
 
 const (
-	PermissionManageSystemSettings PermissionKey = "manage_system_settings"
-	PermissionAssignRole           PermissionKey = "assign_role"
-	PermissionManageUsers          PermissionKey = "manage_users"
+	PermissionManageSystemSettings   PermissionKey = "manage_system_settings"
+	PermissionAssignRole             PermissionKey = "assign_role"
+	PermissionManageUsers            PermissionKey = "manage_users"
+	PermissionResetUserPassword      PermissionKey = "reset_user_password"
+	PermissionDeactivateUser          PermissionKey = "deactivate_user"
+	PermissionManageRoles            PermissionKey = "manage_roles"
+	PermissionManageRolePermissions   PermissionKey = "manage_role_permissions"
 )
 
 // PermissionDefinition adalah metadata satu permission (dipakai sebagai bentuk
@@ -51,6 +55,22 @@ var DefaultPermissionsInit = PermissionInit{
 	PermissionManageUsers: {
 		DisplayName: "Manage Users",
 		Description: "Mengelola akun user (lihat, ubah status, dsb).",
+	},
+	PermissionResetUserPassword: {
+		DisplayName: "Reset User Password",
+		Description: "Menyetel ulang kata sandi user lain (admin-generate temp password).",
+	},
+	PermissionDeactivateUser: {
+		DisplayName: "Deactivate User",
+		Description: "Menonaktifkan atau mengaktifkan kembali akun user.",
+	},
+	PermissionManageRoles: {
+		DisplayName: "Manage Roles",
+		Description: "Membuat dan mengubah metadata role (definisi role).",
+	},
+	PermissionManageRolePermissions: {
+		DisplayName: "Manage Role Permissions",
+		Description: "Menetapkan atau mencabut permission pada role custom.",
 	},
 }
 
@@ -93,10 +113,21 @@ func IsValidPermissionKey(key PermissionKey) bool {
 // dimilikinya (fixed, tidak bisa diubah lewat API — lihat AssignRolePermissionUseCase
 // yang menolak assignment untuk role bertipe system).
 var RolePermissions = map[RoleName][]PermissionKey{
-	UserGodRoleName:    {PermissionManageSystemSettings, PermissionAssignRole, PermissionManageUsers},
-	SuperAdminRoleName: {PermissionManageSystemSettings, PermissionAssignRole, PermissionManageUsers},
-	AdminRoleName:      {PermissionAssignRole, PermissionManageUsers},
-	MemberRoleName:     {},
+	UserGodRoleName: {
+		PermissionManageSystemSettings, PermissionAssignRole, PermissionManageUsers,
+		PermissionResetUserPassword, PermissionDeactivateUser,
+		PermissionManageRoles, PermissionManageRolePermissions,
+	},
+	SuperAdminRoleName: {
+		PermissionManageSystemSettings, PermissionAssignRole, PermissionManageUsers,
+		PermissionResetUserPassword, PermissionDeactivateUser,
+		PermissionManageRoles, PermissionManageRolePermissions,
+	},
+	AdminRoleName: {
+		PermissionAssignRole, PermissionManageUsers,
+		PermissionResetUserPassword, PermissionDeactivateUser,
+	},
+	MemberRoleName: {},
 }
 
 // PermissionsForRole mengembalikan daftar permission key system-role dari constant ini.

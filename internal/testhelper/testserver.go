@@ -22,6 +22,7 @@ import (
 	"sipon-api/internal/app/service/principal"
 	authUsecase "sipon-api/internal/app/usecase/auth"
 	rolePermissionUsecase "sipon-api/internal/app/usecase/rolepermission"
+	userManagementUsecase "sipon-api/internal/app/usecase/usermanagement"
 	"sipon-api/internal/config"
 	"sipon-api/internal/infrastructure/external/bcrypt"
 	extjwt "sipon-api/internal/infrastructure/external/jwt"
@@ -67,6 +68,7 @@ func MustStartTestServer() (*TestServer, func()) {
 	userRoleRepo := persistence.NewPostgresUserRoleRepository(db)
 	rolePermissionRepo := persistence.NewPostgresRolePermissionRepository(db)
 	rolePermissionReadModel := persistence.NewPostgresRoleQuery(db)
+	userReadModel := persistence.NewPostgresUserQuery(db)
 	transactor := persistence.NewPostgresTransactor(db)
 
 	// ── Infrastructure: external services (no-op/in-memory untuk test) ─────
@@ -101,6 +103,12 @@ func MustStartTestServer() (*TestServer, func()) {
 		ReadModel:          rolePermissionReadModel,
 	})
 
+	userManagementUseCases := userManagementUsecase.NewUseCases(userManagementUsecase.Dependencies{
+		UserRepo:  userRepo,
+		ReadModel: userReadModel,
+		Hasher:    hasher,
+	})
+
 	// ── Principal builder & cache ───────────────────────────────────────────
 	principalCache := noopPrincipalCache{}
 	principalBuilder := principal.NewBuilder(userRepo, userRoleRepo, roleRepo, rolePermissionRepo)
@@ -108,12 +116,13 @@ func MustStartTestServer() (*TestServer, func()) {
 	// ── HTTP handlers & router ──────────────────────────────────────────────
 	webAuthHandler := webhandler.NewAuthHandler(registerUC, loginUC, refreshTokenUC, changePasswordLocalUC, setPasswordLocalUC, requestIdentityOTPUC, verifyIdentityOTPUC, meUC, forgotPasswordUC, resetPasswordUC, requestChangeIdentityUC, confirmChangeIdentityUC, getSessionUC, logoutUC)
 	webRolePermHandler := webhandler.NewRolePermissionHandler(rolePermissionUseCases)
+	webUserManagementHandler := webhandler.NewUserManagementHandler(userManagementUseCases)
 
 	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelWarn}))
 	rlCfg := config.RateLimitConfig{Enabled: false}
 
 	engine := router.Setup(
-		webAuthHandler, webRolePermHandler,
+		webAuthHandler, webRolePermHandler, webUserManagementHandler,
 		tokenGen, sessionRevocationStore, principalBuilder, principalCache,
 		nil, rlCfg, "test", logger,
 	)

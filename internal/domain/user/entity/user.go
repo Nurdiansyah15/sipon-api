@@ -102,6 +102,30 @@ func (u *User) Activate() error {
 	return nil
 }
 
+// Deactivate mem-banned akun user (menonaktifkannya). Menolak idempotent
+// double-deactivate supaya pemanggil bisa membedakan "sudah nonaktif" dari
+// " berhasil dinonaktifkan". Reuses StatusBanned — tidak ada nilai status baru
+// (lihat docs/plans/system-management-module.md §Decision 2).
+func (u *User) Deactivate() error {
+	if u.Status == constant.StatusBanned {
+		return domainerr.New(constant.CodeUserAlreadyBanned)
+	}
+	u.Status = constant.StatusBanned
+	u.UpdatedAt = time.Now()
+	return nil
+}
+
+// Reactivate mengaktifkan kembali akun yang sebelumnya di-deactivate. Menolak
+// idempotent double-reactivate.
+func (u *User) Reactivate() error {
+	if u.Status == constant.StatusActive {
+		return domainerr.New(constant.CodeUserAlreadyActive)
+	}
+	u.Status = constant.StatusActive
+	u.UpdatedAt = time.Now()
+	return nil
+}
+
 func (u *User) MarkLogin() {
 	now := time.Now()
 	u.LastLoginAt = &now

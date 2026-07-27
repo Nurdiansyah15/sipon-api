@@ -37,9 +37,12 @@ const (
 	CodeLoginIdentityUnverified     domainerr.Code = "DOMAIN_LOGIN_IDENTITY_UNVERIFIED"
 	CodeUserUsernameTaken           domainerr.Code = "DOMAIN_USER_USERNAME_TAKEN"
 	CodeUserUsernameSameAsCurrent   domainerr.Code = "DOMAIN_USER_USERNAME_SAME_AS_CURRENT"
-	CodeUserNoLocalCredential       domainerr.Code = "DOMAIN_USER_NO_LOCAL_CREDENTIAL"
-	CodeUserAlreadyHasLocalPassword domainerr.Code = "DOMAIN_USER_ALREADY_HAS_LOCAL_PASSWORD"
-	CodeUserLockedOut               domainerr.Code = "DOMAIN_USER_LOCKED_OUT"
+	CodeUserNoLocalCredential        domainerr.Code = "DOMAIN_USER_NO_LOCAL_CREDENTIAL"
+	CodeUserAlreadyHasLocalPassword  domainerr.Code = "DOMAIN_USER_ALREADY_HAS_LOCAL_PASSWORD"
+	CodeUserLockedOut                domainerr.Code = "DOMAIN_USER_LOCKED_OUT"
+	CodeUserAlreadyBanned            domainerr.Code = "DOMAIN_USER_ALREADY_BANNED"
+	CodeUserAlreadyActive             domainerr.Code = "DOMAIN_USER_ALREADY_ACTIVE"
+	CodeUserDuplicate                 domainerr.Code = "DOMAIN_USER_DUPLICATE"
 )
 
 type CredentialType string
