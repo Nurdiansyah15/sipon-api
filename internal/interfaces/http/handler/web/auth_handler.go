@@ -28,6 +28,7 @@ type AuthHandler struct {
 	confirmChangeIdentity *authUsecase.ConfirmChangeIdentityUseCase
 	getSession            *authUsecase.GetSessionUseCase
 	logout                *authUsecase.LogoutUseCase
+	getProfile            *authUsecase.GetProfileUseCase
 }
 
 func NewAuthHandler(
@@ -45,6 +46,7 @@ func NewAuthHandler(
 	confirmChangeIdentity *authUsecase.ConfirmChangeIdentityUseCase,
 	getSession *authUsecase.GetSessionUseCase,
 	logout *authUsecase.LogoutUseCase,
+	getProfile *authUsecase.GetProfileUseCase,
 ) *AuthHandler {
 	return &AuthHandler{
 		register:              register,
@@ -61,6 +63,7 @@ func NewAuthHandler(
 		confirmChangeIdentity: confirmChangeIdentity,
 		getSession:            getSession,
 		logout:                logout,
+		getProfile:            getProfile,
 	}
 }
 
@@ -336,6 +339,32 @@ func (h *AuthHandler) Me(c *gin.Context) {
 	}
 
 	respond.OK(c, "me success", resp)
+}
+
+// Profile godoc
+// @Summary Get user profile with roles & permissions
+// @Description Mengembalikan data profil user lengkap dengan roles dan permissions dalam satu response.
+// @Tags Web/Auth
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} respond.SuccessBody{data=dto.ProfileResponse}
+// @Failure 401 {object} respond.ErrorBody
+// @Router /api/v1/web/auth/profile [get]
+// GET /api/v1/web/auth/profile (protected)
+func (h *AuthHandler) Profile(c *gin.Context) {
+	p := middleware.GetPrincipal(c)
+	if p == nil {
+		httperror.Handle(c, apperror.Unauthorized(string(apperror.CodeUnauthorized)))
+		return
+	}
+
+	resp, err := h.getProfile.Execute(c.Request.Context(), p.UserID, p)
+	if err != nil {
+		httperror.Handle(c, err)
+		return
+	}
+
+	respond.OK(c, "OK", resp)
 }
 
 // ForgotPassword godoc

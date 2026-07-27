@@ -92,6 +92,7 @@ func MustStartTestServer() (*TestServer, func()) {
 	requestChangeIdentityUC := authUsecase.NewRequestChangeIdentityUseCase(userRepo, verifRepo, otpGenerator, emailSender, smsSender)
 	confirmChangeIdentityUC := authUsecase.NewConfirmChangeIdentityUseCase(userRepo, verifRepo, transactor)
 	getSessionUC := authUsecase.NewGetSessionUseCase(userRepo)
+	getProfileUC := authUsecase.NewGetProfileUseCase(userRepo)
 	logoutUC := authUsecase.NewLogoutUseCase(sessionRevocationStore, 24*time.Hour)
 	registerUC := authUsecase.NewRegisterUseCase(userRepo, verifRepo, hasher, otpGenerator, emailSender, smsSender, tokenGen, transactor, roleRepo, userRoleRepo)
 
@@ -114,7 +115,7 @@ func MustStartTestServer() (*TestServer, func()) {
 	principalBuilder := principal.NewBuilder(userRepo, userRoleRepo, roleRepo, rolePermissionRepo)
 
 	// ── HTTP handlers & router ──────────────────────────────────────────────
-	webAuthHandler := webhandler.NewAuthHandler(registerUC, loginUC, refreshTokenUC, changePasswordLocalUC, setPasswordLocalUC, requestIdentityOTPUC, verifyIdentityOTPUC, meUC, forgotPasswordUC, resetPasswordUC, requestChangeIdentityUC, confirmChangeIdentityUC, getSessionUC, logoutUC)
+	webAuthHandler := webhandler.NewAuthHandler(registerUC, loginUC, refreshTokenUC, changePasswordLocalUC, setPasswordLocalUC, requestIdentityOTPUC, verifyIdentityOTPUC, meUC, forgotPasswordUC, resetPasswordUC, requestChangeIdentityUC, confirmChangeIdentityUC, getSessionUC, logoutUC, getProfileUC)
 	webRolePermHandler := webhandler.NewRolePermissionHandler(rolePermissionUseCases)
 	webUserManagementHandler := webhandler.NewUserManagementHandler(userManagementUseCases)
 

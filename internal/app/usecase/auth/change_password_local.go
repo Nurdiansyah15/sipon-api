@@ -70,7 +70,7 @@ func (uc *ChangePasswordLocalUseCase) Execute(ctx context.Context, userID string
 	}
 
 	if err := uc.hasher.Verify(localCred.SecretHash.Value(), req.CurrentPassword); err != nil {
-		return nil, apperror.Unauthorized(string(apperror.CodeUnauthorized), err)
+		return nil, apperror.Unprocessable(string(apperror.CodeInvalidCurrentPassword), nil, err)
 	}
 
 	hashedStr, err := uc.hasher.Hash(newPlain.Value())

@@ -27,6 +27,7 @@ const (
 	CodeSearchQueryRequired       Code = "SEARCH_QUERY_REQUIRED"
 	CodeTokenRequired             Code = "TOKEN_REQUIRED"
 	CodePasswordSameAsCurrent     Code = "PASSWORD_SAME_AS_CURRENT"
+	CodeInvalidCurrentPassword    Code = "INVALID_CURRENT_PASSWORD"
 	CodeUnsupportedIdentifierKind Code = "UNSUPPORTED_IDENTIFIER_KIND"
 	CodeContentBannedKeyword      Code = "CONTENT_BANNED_KEYWORD"
 )

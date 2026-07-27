@@ -143,8 +143,8 @@ func TestWebAuth_Login_AccountLockout(t *testing.T) {
 			"identifier": email,
 			"password":   "WrongPassword99!",
 		})
-		assert.Equal(t, 401, w.Code)
-	}
+	assert.Equal(t, 422, w.Code)
+}
 
 	// 6th attempt: account is now locked → 429
 	w := testSrv.POST("/api/v1/web/auth/login", map[string]any{

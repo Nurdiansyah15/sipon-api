@@ -93,6 +93,7 @@ func Setup(
 	}
 	{
 		protectedWeb.GET("/auth/me", webAuthHandler.Me)
+		protectedWeb.GET("/auth/profile", webAuthHandler.Profile)
 		protectedWeb.POST("/auth/change-password", webAuthHandler.ChangePasswordLocal)
 		protectedWeb.POST("/auth/set-password", webAuthHandler.SetPasswordLocal)
 		protectedWeb.POST("/auth/change-email/request", webAuthHandler.RequestChangeEmail)
