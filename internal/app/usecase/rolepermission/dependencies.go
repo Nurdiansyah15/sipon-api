@@ -10,6 +10,7 @@ type Dependencies struct {
 	RoleRepo           rolerepo.RoleRepository
 	UserRoleRepo       rolerepo.UserRoleRepository
 	RolePermissionRepo rolerepo.RolePermissionRepository
+	RoleScopeRepo      rolerepo.RoleScopeRepository
 	UserRepo           userrepo.UserRepository
 	ReadModel          port.RolePermissionQueryReadModel
 }
@@ -29,6 +30,9 @@ type UseCases struct {
 	DeactivateUserRole   *DeactivateUserRoleUseCase
 	ReactivateUserRole   *ReactivateUserRoleUseCase
 	DeleteUserRole       *DeleteUserRoleUseCase
+	AssignRoleScope      *AssignRoleScopeUseCase
+	RemoveRoleScope      *RemoveRoleScopeUseCase
+	ListRoleScopes       *ListRoleScopesUseCase
 }
 
 func NewUseCases(deps Dependencies) *UseCases {
@@ -50,5 +54,8 @@ func NewUseCases(deps Dependencies) *UseCases {
 		DeactivateUserRole:   NewDeactivateUserRoleUseCase(deps.UserRoleRepo, newGetUserRole()),
 		ReactivateUserRole:   NewReactivateUserRoleUseCase(deps.UserRoleRepo, newGetUserRole()),
 		DeleteUserRole:       NewDeleteUserRoleUseCase(deps.UserRoleRepo),
+		AssignRoleScope:      NewAssignRoleScopeUseCase(deps.RoleRepo, deps.RoleScopeRepo),
+		RemoveRoleScope:      NewRemoveRoleScopeUseCase(deps.RoleScopeRepo),
+		ListRoleScopes:       NewListRoleScopesUseCase(deps.RoleScopeRepo),
 	}
 }

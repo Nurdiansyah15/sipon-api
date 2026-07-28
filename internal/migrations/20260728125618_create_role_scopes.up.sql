@@ -1,9 +1,9 @@
-CREATE TABLE user_scopes (
+CREATE TABLE role_scopes (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    role_id     UUID NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
     scope_type  VARCHAR(50) NOT NULL CHECK (scope_type IN ('gender')),
     scope_value VARCHAR(100) NOT NULL,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    CONSTRAINT uq_user_scopes UNIQUE (user_id, scope_type, scope_value)
+    CONSTRAINT uq_role_scopes UNIQUE (role_id, scope_type, scope_value)
 );

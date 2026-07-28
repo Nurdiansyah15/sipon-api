@@ -18,7 +18,7 @@ type Builder struct {
 	userRoleRepo       rolerepo.UserRoleRepository
 	roleRepo           rolerepo.RoleRepository
 	rolePermissionRepo rolerepo.RolePermissionRepository
-	userScopeRepo      userrepo.UserScopeRepository
+	roleScopeRepo      rolerepo.RoleScopeRepository
 }
 
 func NewBuilder(
@@ -26,21 +26,17 @@ func NewBuilder(
 	userRoleRepo rolerepo.UserRoleRepository,
 	roleRepo rolerepo.RoleRepository,
 	rolePermissionRepo rolerepo.RolePermissionRepository,
-	userScopeRepo userrepo.UserScopeRepository,
+	roleScopeRepo rolerepo.RoleScopeRepository,
 ) *Builder {
 	return &Builder{
 		userRepo:           userRepo,
 		userRoleRepo:       userRoleRepo,
 		roleRepo:           roleRepo,
 		rolePermissionRepo: rolePermissionRepo,
-		userScopeRepo:      userScopeRepo,
+		roleScopeRepo:      roleScopeRepo,
 	}
 }
 
-// Build memuat Principal dari user + role aktifnya. Permission role SYSTEM
-// dihitung langsung dari constant.PermissionsForRole(role.Name) (fixed di
-// kode); permission role CUSTOM dimuat dari tabel role_permissions (bisa
-// diatur dinamis lewat AssignRolePermissionUseCase/RevokeRolePermissionUseCase).
 func (b *Builder) Build(ctx context.Context, userID, sessionID string) (*Principal, error) {
 	user, err := b.userRepo.FindByID(ctx, userID)
 	if err != nil {
@@ -64,6 +60,7 @@ func (b *Builder) Build(ctx context.Context, userID, sessionID string) (*Princip
 	}
 
 	seenPermKey := make(map[string]struct{})
+	seenScopeKey := make(map[string]struct{})
 
 	for _, assignment := range assignments {
 		if assignment == nil {
@@ -101,17 +98,22 @@ func (b *Builder) Build(ctx context.Context, userID, sessionID string) (*Princip
 				Scope: string(role.ScopeType),
 			})
 		}
-	}
 
-	// Load user_scopes (best-effort — gagal load scope tidak boleh gagalkan request).
-	if b.userScopeRepo != nil {
-		scopes, scopeErr := b.userScopeRepo.FindByUserID(ctx, userID)
-		if scopeErr == nil {
-			for _, s := range scopes {
-				p.Scopes = append(p.Scopes, UserScope{
-					ScopeType:  string(s.ScopeType),
-					ScopeValue: s.ScopeValue,
-				})
+		// Load role_scopes (best-effort, per role)
+		if b.roleScopeRepo != nil {
+			roleScopes, scopeErr := b.roleScopeRepo.FindByRoleID(ctx, assignment.RoleID)
+			if scopeErr == nil {
+				for _, rs := range roleScopes {
+					dedupKey := string(rs.ScopeType) + ":" + rs.ScopeValue
+					if _, seen := seenScopeKey[dedupKey]; seen {
+						continue
+					}
+					seenScopeKey[dedupKey] = struct{}{}
+					p.Scopes = append(p.Scopes, UserScope{
+						ScopeType:  string(rs.ScopeType),
+						ScopeValue: rs.ScopeValue,
+					})
+				}
 			}
 		}
 	}

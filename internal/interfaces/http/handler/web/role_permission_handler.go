@@ -390,6 +390,83 @@ func (h *RolePermissionHandler) DeleteUserRole(c *gin.Context) {
 	respond.OK(c, "User role deleted successfully", gin.H{"message": "User role deleted successfully"})
 }
 
+// ── Role Scopes ─────────────────────────────────────────────────────────────
+
+// ListRoleScopes godoc
+// @Summary List scopes for a role
+// @Description Mengambil daftar scope yang di-assign ke role tertentu.
+// @Tags Web/RolePermission
+// @Produce json
+// @Param role_id path string true "Role ID"
+// @Success 200 {object} respond.SuccessBody
+// @Failure 401 {object} respond.ErrorBody
+// @Failure 403 {object} respond.ErrorBody
+// @Failure 500 {object} respond.ErrorBody
+// @Security BearerAuth
+// @Router /api/v1/web/role-permission/roles/{role_id}/scopes [get]
+func (h *RolePermissionHandler) ListRoleScopes(c *gin.Context) {
+	data, err := h.useCases.ListRoleScopes.Execute(c.Request.Context(), c.Param("role_id"))
+	if err != nil {
+		httperror.Handle(c, err)
+		return
+	}
+	respond.OK(c, "role scopes fetched", data)
+}
+
+// AssignRoleScope godoc
+// @Summary Assign scope to role
+// @Description Menambahkan scope baru ke role (hanya untuk custom role).
+// @Tags Web/RolePermission
+// @Accept json
+// @Produce json
+// @Param role_id path string true "Role ID"
+// @Param request body dto.AssignRoleScopeRequest true "Scope payload"
+// @Success 201 {object} respond.SuccessBody
+// @Failure 400 {object} respond.ErrorBody
+// @Failure 401 {object} respond.ErrorBody
+// @Failure 403 {object} respond.ErrorBody
+// @Failure 404 {object} respond.ErrorBody
+// @Failure 422 {object} respond.ErrorBody
+// @Failure 500 {object} respond.ErrorBody
+// @Security BearerAuth
+// @Router /api/v1/web/role-permission/roles/{role_id}/scopes [post]
+func (h *RolePermissionHandler) AssignRoleScope(c *gin.Context) {
+	var req dto.AssignRoleScopeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httperror.Handle(c, err)
+		return
+	}
+	resp, err := h.useCases.AssignRoleScope.Execute(c.Request.Context(), c.Param("role_id"), req)
+	if err != nil {
+		httperror.Handle(c, err)
+		return
+	}
+	respond.Created(c, "role scope assigned", resp)
+}
+
+// RemoveRoleScope godoc
+// @Summary Remove scope from role
+// @Description Menghapus scope yang sudah di-assign ke role.
+// @Tags Web/RolePermission
+// @Produce json
+// @Param role_id path string true "Role ID"
+// @Param scope_id path string true "Scope ID"
+// @Success 200 {object} respond.SuccessBody
+// @Failure 401 {object} respond.ErrorBody
+// @Failure 403 {object} respond.ErrorBody
+// @Failure 404 {object} respond.ErrorBody
+// @Failure 500 {object} respond.ErrorBody
+// @Security BearerAuth
+// @Router /api/v1/web/role-permission/roles/{role_id}/scopes/{scope_id} [delete]
+func (h *RolePermissionHandler) RemoveRoleScope(c *gin.Context) {
+	err := h.useCases.RemoveRoleScope.Execute(c.Request.Context(), c.Param("scope_id"))
+	if err != nil {
+		httperror.Handle(c, err)
+		return
+	}
+	respond.OK(c, "role scope removed", nil)
+}
+
 func currentUserID(c *gin.Context) (string, error) {
 	userIDAny, ok := c.Get("user_id")
 	if !ok {

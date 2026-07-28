@@ -109,3 +109,16 @@ type UserRoleResponse struct {
 	DeactivatedAt *time.Time          `json:"deactivated_at,omitempty"`
 	Permissions   []string            `json:"permissions,omitempty"`
 }
+
+// ── Role Scope ────────────────────────────────────────────────────────────────
+
+type AssignRoleScopeRequest struct {
+	ScopeType  string `json:"scope_type" binding:"required,oneof=gender"`
+	ScopeValue string `json:"scope_value" binding:"required,oneof=male female"`
+}
+
+type RoleScopeResponse struct {
+	ID         string `json:"id"`
+	ScopeType  string `json:"scope_type"`
+	ScopeValue string `json:"scope_value"`
+}

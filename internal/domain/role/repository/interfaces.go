@@ -36,3 +36,11 @@ type RolePermissionRepository interface {
 	Delete(ctx context.Context, roleID string, permissionKey constant.PermissionKey) error
 	ListByRoleID(ctx context.Context, roleID string) ([]*entity.RolePermission, error)
 }
+
+// RoleScopeRepository mengelola scope assignment untuk role.
+type RoleScopeRepository interface {
+	Save(ctx context.Context, scope *entity.RoleScope) error
+	Delete(ctx context.Context, id string) error
+	FindByID(ctx context.Context, id string) (*entity.RoleScope, error)
+	FindByRoleID(ctx context.Context, roleID string) ([]*entity.RoleScope, error)
+}

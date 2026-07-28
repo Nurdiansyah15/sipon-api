@@ -21,12 +21,3 @@ type UserRepository interface {
 	ExistsByLoginIdentity(ctx context.Context, kind constant.LoginIdentifierKind, value string) (bool, error)
 	UpdateUsername(ctx context.Context, userID, newUsername string) error
 }
-
-// UserScopeRepository mengelola user_scopes — assignment scope mandiri yang tidak
-// terkait role. Dipakai oleh Principal Builder untuk memuat scope user.
-type UserScopeRepository interface {
-	Save(ctx context.Context, scope *entity.UserScope) error
-	Delete(ctx context.Context, id string) error
-	FindByID(ctx context.Context, id string) (*entity.UserScope, error)
-	FindByUserID(ctx context.Context, userID string) ([]*entity.UserScope, error)
-}

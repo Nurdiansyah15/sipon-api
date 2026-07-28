@@ -6,24 +6,23 @@ import (
 	domainerr "sipon-api/internal/domain/errors"
 )
 
-type UserScopeType string
+type ScopeType string
 
 const (
-	ScopeTypeGender UserScopeType = "gender"
+	ScopeTypeGender ScopeType = "gender"
 )
 
-// Gender scope values
 const (
 	GenderMale   = "male"
 	GenderFemale = "female"
 )
 
-func NewUserScopeValue(scopeType UserScopeType, rawValue string) (string, error) {
+func NewScopeValue(scopeType ScopeType, rawValue string) (string, error) {
 	v := strings.TrimSpace(strings.ToLower(rawValue))
 	switch scopeType {
 	case ScopeTypeGender:
 		if v != GenderMale && v != GenderFemale {
-			return "", domainerr.New("DOMAIN_INVALID_GENDER_SCOPE_VALUE")
+			return "", domainerr.New("DOMAIN_INVALID_SCOPE_VALUE")
 		}
 		return v, nil
 	default:

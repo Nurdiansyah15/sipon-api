@@ -119,9 +119,6 @@ func Setup(
 			users.POST("/:user_id/reset-password", middleware.RequirePermission(string(roleconstant.PermissionResetUserPassword)), webUserManagementHandler.ResetUserPassword)
 			users.POST("/:user_id/deactivate", middleware.RequirePermission(string(roleconstant.PermissionDeactivateUser)), webUserManagementHandler.DeactivateUser)
 			users.POST("/:user_id/reactivate", middleware.RequirePermission(string(roleconstant.PermissionDeactivateUser)), webUserManagementHandler.ReactivateUser)
-			users.GET("/:user_id/scopes", middleware.RequirePermission(string(roleconstant.PermissionManageUsers)), webUserManagementHandler.ListUserScopes)
-			users.POST("/:user_id/scopes", middleware.RequirePermission(string(roleconstant.PermissionManageUsers)), webUserManagementHandler.AssignUserScope)
-			users.DELETE("/:user_id/scopes/:scope_id", middleware.RequirePermission(string(roleconstant.PermissionManageUsers)), webUserManagementHandler.RemoveUserScope)
 		}
 
 		// ── Role & Permission Management ──────────────────────────────────────
@@ -160,6 +157,10 @@ func Setup(
 			rolePermission.POST("/user-roles/:user_role_id/deactivate", userRoleWriteGuard, webRolePermissionHandler.DeactivateUserRole)
 			rolePermission.POST("/user-roles/:user_role_id/reactivate", userRoleWriteGuard, webRolePermissionHandler.ReactivateUserRole)
 			rolePermission.DELETE("/user-roles/:user_role_id", userRoleWriteGuard, webRolePermissionHandler.DeleteUserRole)
+
+			rolePermission.GET("/roles/:role_id/scopes", readRoleGuard, webRolePermissionHandler.ListRoleScopes)
+			rolePermission.POST("/roles/:role_id/scopes", middleware.RequirePermission(string(roleconstant.PermissionManageRolePermissions)), webRolePermissionHandler.AssignRoleScope)
+			rolePermission.DELETE("/roles/:role_id/scopes/:scope_id", middleware.RequirePermission(string(roleconstant.PermissionManageRolePermissions)), webRolePermissionHandler.RemoveRoleScope)
 		}
 	}
 
