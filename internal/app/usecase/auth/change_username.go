@@ -73,7 +73,7 @@ func (uc *ChangeUsernameUseCase) Execute(ctx context.Context, userID string, req
 
 	// Update username
 	user.ChangeUsername(newUsername)
-	if err := uc.userRepo.Update(ctx, user); err != nil {
+	if err := uc.userRepo.UpdateUsername(ctx, user.ID, newUsername.Value()); err != nil {
 		return nil, apperror.Internal(string(apperror.CodeInternal), err)
 	}
 
