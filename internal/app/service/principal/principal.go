@@ -14,11 +14,18 @@ type Permission struct {
 	Scope string
 }
 
+// UserScope merepresentasikan scope mandiri yang di-assign ke user.
+type UserScope struct {
+	ScopeType  string
+	ScopeValue string
+}
+
 type Principal struct {
 	UserID      string
 	SessionID   string
 	Roles       []Role
 	Permissions []Permission
+	Scopes      []UserScope
 }
 
 func (p *Principal) HasRole(name string) bool {
@@ -51,4 +58,15 @@ func (p *Principal) IsSuperAdmin() bool {
 
 func (p *Principal) IsAdmin() bool {
 	return p.HasRole("admin") || p.IsSuperAdmin()
+}
+
+// GetScope mengembalikan scope value untuk scope_type tertentu.
+// Return "" jika user tidak punya scope type tersebut — artinya tanpa filter.
+func (p *Principal) GetScope(scopeType string) string {
+	for _, s := range p.Scopes {
+		if strings.EqualFold(s.ScopeType, scopeType) {
+			return s.ScopeValue
+		}
+	}
+	return ""
 }

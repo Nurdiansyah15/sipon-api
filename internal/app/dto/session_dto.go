@@ -22,9 +22,16 @@ type SessionPermission struct {
 	Scope string `json:"scope"`
 }
 
+// SessionUserScope is one entry in scopes[].
+type SessionUserScope struct {
+	ScopeType  string `json:"scope_type"`
+	ScopeValue string `json:"scope_value"`
+}
+
 // SessionData is the full response body for GET /api/v1/auth/session.
 type SessionData struct {
 	User        SessionUser         `json:"user"`
 	Roles       []SessionRole       `json:"roles"`
 	Permissions []SessionPermission `json:"permissions"`
+	Scopes      []SessionUserScope  `json:"scopes"`
 }

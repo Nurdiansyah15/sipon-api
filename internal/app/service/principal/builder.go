@@ -18,6 +18,7 @@ type Builder struct {
 	userRoleRepo       rolerepo.UserRoleRepository
 	roleRepo           rolerepo.RoleRepository
 	rolePermissionRepo rolerepo.RolePermissionRepository
+	userScopeRepo      userrepo.UserScopeRepository
 }
 
 func NewBuilder(
@@ -25,12 +26,14 @@ func NewBuilder(
 	userRoleRepo rolerepo.UserRoleRepository,
 	roleRepo rolerepo.RoleRepository,
 	rolePermissionRepo rolerepo.RolePermissionRepository,
+	userScopeRepo userrepo.UserScopeRepository,
 ) *Builder {
 	return &Builder{
 		userRepo:           userRepo,
 		userRoleRepo:       userRoleRepo,
 		roleRepo:           roleRepo,
 		rolePermissionRepo: rolePermissionRepo,
+		userScopeRepo:      userScopeRepo,
 	}
 }
 
@@ -52,6 +55,7 @@ func (b *Builder) Build(ctx context.Context, userID, sessionID string) (*Princip
 		SessionID:   sessionID,
 		Roles:       make([]Role, 0),
 		Permissions: make([]Permission, 0),
+		Scopes:      make([]UserScope, 0),
 	}
 
 	assignments, err := b.userRoleRepo.FindActiveByUserID(ctx, userID)
@@ -96,6 +100,19 @@ func (b *Builder) Build(ctx context.Context, userID, sessionID string) (*Princip
 				Key:   string(permKey),
 				Scope: string(role.ScopeType),
 			})
+		}
+	}
+
+	// Load user_scopes (best-effort — gagal load scope tidak boleh gagalkan request).
+	if b.userScopeRepo != nil {
+		scopes, scopeErr := b.userScopeRepo.FindByUserID(ctx, userID)
+		if scopeErr == nil {
+			for _, s := range scopes {
+				p.Scopes = append(p.Scopes, UserScope{
+					ScopeType:  string(s.ScopeType),
+					ScopeValue: s.ScopeValue,
+				})
+			}
 		}
 	}
 

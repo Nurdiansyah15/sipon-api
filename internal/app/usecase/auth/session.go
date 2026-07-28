@@ -46,6 +46,14 @@ func (uc *GetSessionUseCase) Execute(ctx context.Context, p *principal.Principal
 		})
 	}
 
+	scopes := make([]dto.SessionUserScope, 0, len(p.Scopes))
+	for _, s := range p.Scopes {
+		scopes = append(scopes, dto.SessionUserScope{
+			ScopeType:  s.ScopeType,
+			ScopeValue: s.ScopeValue,
+		})
+	}
+
 	return &dto.SessionData{
 		User: dto.SessionUser{
 			ID:       user.ID,
@@ -55,5 +63,6 @@ func (uc *GetSessionUseCase) Execute(ctx context.Context, p *principal.Principal
 		},
 		Roles:       roles,
 		Permissions: permissions,
+		Scopes:      scopes,
 	}, nil
 }

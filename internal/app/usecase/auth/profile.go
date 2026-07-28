@@ -84,6 +84,14 @@ func (uc *GetProfileUseCase) Execute(ctx context.Context, userID string, p *prin
 		})
 	}
 
+	scopes := make([]dto.SessionUserScope, 0, len(p.Scopes))
+	for _, s := range p.Scopes {
+		scopes = append(scopes, dto.SessionUserScope{
+			ScopeType:  s.ScopeType,
+			ScopeValue: s.ScopeValue,
+		})
+	}
+
 	return &dto.ProfileResponse{
 		ID:              user.ID,
 		Username:        user.Username.Value(),
@@ -98,5 +106,6 @@ func (uc *GetProfileUseCase) Execute(ctx context.Context, userID string, p *prin
 		AvatarURL:       resolveAvatarURL(uc.fileUploader, user.AvatarKey),
 		Roles:           roles,
 		Permissions:     permissions,
+		Scopes:          scopes,
 	}, nil
 }

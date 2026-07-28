@@ -9,9 +9,10 @@ import (
 // (memberakses User aggregate, bukan role_permission), tapi memakai UserQueryReadModel
 // (read model) untuk listing + role summary — bayangan rolepermission.Dependencies.
 type Dependencies struct {
-	UserRepo  userrepo.UserRepository
-	ReadModel port.UserQueryReadModel
-	Hasher    port.PasswordHasher
+	UserRepo      userrepo.UserRepository
+	ReadModel     port.UserQueryReadModel
+	Hasher        port.PasswordHasher
+	UserScopeRepo userrepo.UserScopeRepository
 }
 
 // UseCases mengumpulkan seluruh usecase admin user-management.
@@ -22,6 +23,9 @@ type UseCases struct {
 	ResetUserPassword  *ResetUserPasswordUseCase
 	DeactivateUser     *DeactivateUserUseCase
 	ReactivateUser     *ReactivateUserUseCase
+	AssignUserScope    *AssignUserScopeUseCase
+	RemoveUserScope    *RemoveUserScopeUseCase
+	ListUserScopes     *ListUserScopesUseCase
 }
 
 // NewUseCases membangun seluruh usecase user-management dari Dependencies.
@@ -33,5 +37,8 @@ func NewUseCases(deps Dependencies) *UseCases {
 		ResetUserPassword: NewResetUserPasswordUseCase(deps.UserRepo, deps.Hasher),
 		DeactivateUser:  NewDeactivateUserUseCase(deps.UserRepo),
 		ReactivateUser:  NewReactivateUserUseCase(deps.UserRepo),
+		AssignUserScope: NewAssignUserScopeUseCase(deps.UserRepo, deps.UserScopeRepo),
+		RemoveUserScope: NewRemoveUserScopeUseCase(deps.UserScopeRepo),
+		ListUserScopes:  NewListUserScopesUseCase(deps.UserScopeRepo),
 	}
 }

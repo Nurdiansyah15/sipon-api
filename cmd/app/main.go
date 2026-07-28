@@ -75,6 +75,7 @@ func main() {
 	rolePermissionRepo := persistence.NewPostgresRolePermissionRepository(db)
 	rolePermissionReadModel := persistence.NewPostgresRoleQuery(db)
 	userReadModel := persistence.NewPostgresUserQuery(db)
+	userScopeRepo := persistence.NewPostgresUserScopeRepository(db)
 
 	// ── Infrastructure: external services ────────────────────────────────────
 	hasher := bcrypt.NewBcryptPasswordHasher()
@@ -166,15 +167,16 @@ func main() {
 	})
 
 	userManagementUseCases := userManagementUsecase.NewUseCases(userManagementUsecase.Dependencies{
-		UserRepo:  userRepo,
-		ReadModel: userReadModel,
-		Hasher:    hasher,
+		UserRepo:      userRepo,
+		ReadModel:     userReadModel,
+		Hasher:        hasher,
+		UserScopeRepo: userScopeRepo,
 	})
 
 	// ── Principal builder & cache ─────────────────────────────────────────────
 	principalCache := cache.NewRedisPrincipalCache(redisClient)
 	rateLimiter := cache.NewRedisRateLimiter(redisClient)
-	principalBuilder := principal.NewBuilder(userRepo, userRoleRepo, roleRepo, rolePermissionRepo)
+	principalBuilder := principal.NewBuilder(userRepo, userRoleRepo, roleRepo, rolePermissionRepo, userScopeRepo)
 
 	// ── Interface: HTTP handler & router ──────────────────────────────────────
 	webAuthHandler := webhandler.NewAuthHandler(registerUC, loginUC, refreshTokenUC, changePasswordLocalUC, setPasswordLocalUC, requestIdentityOTPUC, verifyIdentityOTPUC, meUC, forgotPasswordUC, resetPasswordUC, requestChangeIdentityUC, confirmChangeIdentityUC, getSessionUC, logoutUC, getProfileUC, updateProfileUC, checkUsernameUC, changeUsernameUC, avatarPresignUC, avatarConfirmUC, avatarDeleteUC)

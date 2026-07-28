@@ -162,3 +162,81 @@ func (h *UserManagementHandler) ReactivateUser(c *gin.Context) {
 	}
 	respond.OK(c, "user reactivated", resp)
 }
+
+// ── User Scopes ─────────────────────────────────────────────────────────────
+
+// ListUserScopes godoc
+// @Summary List user scopes
+// @Description Mengambil daftar scope yang di-assign ke user tertentu.
+// @Tags Web/UserManagement
+// @Produce json
+// @Param user_id path string true "User ID"
+// @Success 200 {object} respond.SuccessBody
+// @Failure 401 {object} respond.ErrorBody
+// @Failure 403 {object} respond.ErrorBody
+// @Failure 404 {object} respond.ErrorBody
+// @Failure 500 {object} respond.ErrorBody
+// @Security BearerAuth
+// @Router /api/v1/web/users/{user_id}/scopes [get]
+func (h *UserManagementHandler) ListUserScopes(c *gin.Context) {
+	data, err := h.useCases.ListUserScopes.Execute(c.Request.Context(), c.Param("user_id"))
+	if err != nil {
+		httperror.Handle(c, err)
+		return
+	}
+	respond.OK(c, "user scopes fetched", data)
+}
+
+// AssignUserScope godoc
+// @Summary Assign scope to user
+// @Description Menambahkan scope baru ke user (misal: gender=male).
+// @Tags Web/UserManagement
+// @Accept json
+// @Produce json
+// @Param user_id path string true "User ID"
+// @Param request body dto.AssignUserScopeRequest true "Scope payload"
+// @Success 201 {object} respond.SuccessBody
+// @Failure 400 {object} respond.ErrorBody
+// @Failure 401 {object} respond.ErrorBody
+// @Failure 403 {object} respond.ErrorBody
+// @Failure 404 {object} respond.ErrorBody
+// @Failure 422 {object} respond.ErrorBody
+// @Failure 500 {object} respond.ErrorBody
+// @Security BearerAuth
+// @Router /api/v1/web/users/{user_id}/scopes [post]
+func (h *UserManagementHandler) AssignUserScope(c *gin.Context) {
+	var req dto.AssignUserScopeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httperror.Handle(c, err)
+		return
+	}
+	resp, err := h.useCases.AssignUserScope.Execute(c.Request.Context(), c.Param("user_id"), req)
+	if err != nil {
+		httperror.Handle(c, err)
+		return
+	}
+	respond.Created(c, "user scope assigned", resp)
+}
+
+// RemoveUserScope godoc
+// @Summary Remove scope from user
+// @Description Menghapus scope yang sudah di-assign ke user.
+// @Tags Web/UserManagement
+// @Produce json
+// @Param user_id path string true "User ID"
+// @Param scope_id path string true "Scope ID"
+// @Success 200 {object} respond.SuccessBody
+// @Failure 401 {object} respond.ErrorBody
+// @Failure 403 {object} respond.ErrorBody
+// @Failure 404 {object} respond.ErrorBody
+// @Failure 500 {object} respond.ErrorBody
+// @Security BearerAuth
+// @Router /api/v1/web/users/{user_id}/scopes/{scope_id} [delete]
+func (h *UserManagementHandler) RemoveUserScope(c *gin.Context) {
+	err := h.useCases.RemoveUserScope.Execute(c.Request.Context(), c.Param("scope_id"))
+	if err != nil {
+		httperror.Handle(c, err)
+		return
+	}
+	respond.OK(c, "user scope removed", nil)
+}

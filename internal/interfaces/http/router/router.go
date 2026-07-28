@@ -119,6 +119,9 @@ func Setup(
 			users.POST("/:user_id/reset-password", middleware.RequirePermission(string(roleconstant.PermissionResetUserPassword)), webUserManagementHandler.ResetUserPassword)
 			users.POST("/:user_id/deactivate", middleware.RequirePermission(string(roleconstant.PermissionDeactivateUser)), webUserManagementHandler.DeactivateUser)
 			users.POST("/:user_id/reactivate", middleware.RequirePermission(string(roleconstant.PermissionDeactivateUser)), webUserManagementHandler.ReactivateUser)
+			users.GET("/:user_id/scopes", middleware.RequirePermission(string(roleconstant.PermissionManageUsers)), webUserManagementHandler.ListUserScopes)
+			users.POST("/:user_id/scopes", middleware.RequirePermission(string(roleconstant.PermissionManageUsers)), webUserManagementHandler.AssignUserScope)
+			users.DELETE("/:user_id/scopes/:scope_id", middleware.RequirePermission(string(roleconstant.PermissionManageUsers)), webUserManagementHandler.RemoveUserScope)
 		}
 
 		// ── Role & Permission Management ──────────────────────────────────────

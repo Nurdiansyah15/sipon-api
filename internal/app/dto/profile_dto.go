@@ -19,4 +19,5 @@ type ProfileResponse struct {
 	AvatarURL       *string             `json:"avatar_url,omitempty"`
 	Roles           []SessionRole       `json:"roles"`
 	Permissions     []SessionPermission `json:"permissions"`
+	Scopes          []SessionUserScope  `json:"scopes"`
 }
