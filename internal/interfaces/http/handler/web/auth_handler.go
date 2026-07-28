@@ -29,6 +29,9 @@ type AuthHandler struct {
 	getSession            *authUsecase.GetSessionUseCase
 	logout                *authUsecase.LogoutUseCase
 	getProfile            *authUsecase.GetProfileUseCase
+	updateProfile         *authUsecase.UpdateProfileUseCase
+	checkUsername         *authUsecase.CheckUsernameUseCase
+	changeUsername        *authUsecase.ChangeUsernameUseCase
 }
 
 func NewAuthHandler(
@@ -47,6 +50,9 @@ func NewAuthHandler(
 	getSession *authUsecase.GetSessionUseCase,
 	logout *authUsecase.LogoutUseCase,
 	getProfile *authUsecase.GetProfileUseCase,
+	updateProfile *authUsecase.UpdateProfileUseCase,
+	checkUsername *authUsecase.CheckUsernameUseCase,
+	changeUsername *authUsecase.ChangeUsernameUseCase,
 ) *AuthHandler {
 	return &AuthHandler{
 		register:              register,
@@ -64,6 +70,9 @@ func NewAuthHandler(
 		getSession:            getSession,
 		logout:                logout,
 		getProfile:            getProfile,
+		updateProfile:         updateProfile,
+		checkUsername:         checkUsername,
+		changeUsername:        changeUsername,
 	}
 }
 
@@ -365,6 +374,135 @@ func (h *AuthHandler) Profile(c *gin.Context) {
 	}
 
 	respond.OK(c, "OK", resp)
+}
+
+// UpdateProfile godoc
+// @Summary Update user profile
+// @Description Memperbarui profil user: fullname (selalu bisa), email & phone (hanya jika belum terverifikasi).
+// @Tags Web/Auth
+// @Accept json
+// @Produce json
+// @Param request body dto.UpdateProfileRequest true "Update profile payload"
+// @Success 200 {object} respond.SuccessBody
+// @Failure 400 {object} respond.ErrorBody
+// @Failure 401 {object} respond.ErrorBody
+// @Failure 404 {object} respond.ErrorBody
+// @Failure 409 {object} respond.ErrorBody
+// @Failure 422 {object} respond.ErrorBody
+// @Failure 500 {object} respond.ErrorBody
+// @Security BearerAuth
+// @Router /api/v1/web/auth/profile [put]
+// PUT /api/v1/web/auth/profile (protected)
+func (h *AuthHandler) UpdateProfile(c *gin.Context) {
+	userIDAny, ok := c.Get("user_id")
+	if !ok {
+		httperror.Handle(c, apperror.Unauthorized("unauthorized"))
+		return
+	}
+	userID, ok := userIDAny.(string)
+	if !ok {
+		httperror.Handle(c, apperror.Unauthorized("unauthorized"))
+		return
+	}
+
+	var req dto.UpdateProfileRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httperror.Handle(c, err)
+		return
+	}
+
+	resp, err := h.updateProfile.Execute(c.Request.Context(), userID, req)
+	if err != nil {
+		httperror.Handle(c, err)
+		return
+	}
+
+	respond.OK(c, "update profile success", resp)
+}
+
+// CheckUsername godoc
+// @Summary Check username availability
+// @Description Mengecek apakah username tersedia (belum dipakai user lain).
+// @Tags Web/Auth
+// @Produce json
+// @Param username query string true "Username to check"
+// @Success 200 {object} respond.SuccessBody{data=dto.CheckUsernameResponse}
+// @Failure 400 {object} respond.ErrorBody
+// @Failure 401 {object} respond.ErrorBody
+// @Failure 422 {object} respond.ErrorBody
+// @Failure 500 {object} respond.ErrorBody
+// @Security BearerAuth
+// @Router /api/v1/web/auth/check-username [get]
+// GET /api/v1/web/auth/check-username?username=xxx (protected)
+func (h *AuthHandler) CheckUsername(c *gin.Context) {
+	userIDAny, ok := c.Get("user_id")
+	if !ok {
+		httperror.Handle(c, apperror.Unauthorized("unauthorized"))
+		return
+	}
+	userID, ok := userIDAny.(string)
+	if !ok {
+		httperror.Handle(c, apperror.Unauthorized("unauthorized"))
+		return
+	}
+
+	username := c.Query("username")
+	if username == "" {
+		httperror.Handle(c, apperror.Unprocessable("parameter username wajib diisi", nil))
+		return
+	}
+
+	resp, err := h.checkUsername.Execute(c.Request.Context(), userID, username)
+	if err != nil {
+		httperror.Handle(c, err)
+		return
+	}
+
+	respond.OK(c, "check username success", resp)
+}
+
+// ChangeUsername godoc
+// @Summary Change username
+// @Description Mengganti username (tidak perlu OTP). Langsung berubah jika tersedia.
+// @Tags Web/Auth
+// @Accept json
+// @Produce json
+// @Param request body dto.ChangeUsernameRequest true "New username"
+// @Success 200 {object} respond.SuccessBody
+// @Failure 400 {object} respond.ErrorBody
+// @Failure 401 {object} respond.ErrorBody
+// @Failure 404 {object} respond.ErrorBody
+// @Failure 409 {object} respond.ErrorBody
+// @Failure 422 {object} respond.ErrorBody
+// @Failure 500 {object} respond.ErrorBody
+// @Security BearerAuth
+// @Router /api/v1/web/auth/change-username [post]
+// POST /api/v1/web/auth/change-username (protected)
+func (h *AuthHandler) ChangeUsername(c *gin.Context) {
+	userIDAny, ok := c.Get("user_id")
+	if !ok {
+		httperror.Handle(c, apperror.Unauthorized("unauthorized"))
+		return
+	}
+	userID, ok := userIDAny.(string)
+	if !ok {
+		httperror.Handle(c, apperror.Unauthorized("unauthorized"))
+		return
+	}
+
+	var req dto.ChangeUsernameRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httperror.Handle(c, err)
+		return
+	}
+
+	resp, err := h.changeUsername.Execute(c.Request.Context(), userID, req)
+	if err != nil {
+		httperror.Handle(c, err)
+		return
+	}
+
+	respond.OK(c, "change username success", resp)
 }
 
 // ForgotPassword godoc

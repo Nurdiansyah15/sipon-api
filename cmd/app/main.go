@@ -129,6 +129,10 @@ func main() {
 	logoutUC := authUsecase.NewLogoutUseCase(sessionRevocationStore, cfg.JWT.AccessTokenTTL)
 	registerUC := authUsecase.NewRegisterUseCase(userRepo, verifRepo, hasher, otpGen, emailSender, smsSender, tokenGen, transactor, roleRepo, userRoleRepo)
 
+	updateProfileUC := authUsecase.NewUpdateProfileUseCase(userRepo)
+	checkUsernameUC := authUsecase.NewCheckUsernameUseCase(userRepo)
+	changeUsernameUC := authUsecase.NewChangeUsernameUseCase(userRepo)
+
 	rolePermissionUseCases := rolePermissionUsecase.NewUseCases(rolePermissionUsecase.Dependencies{
 		RoleRepo:           roleRepo,
 		UserRoleRepo:       userRoleRepo,
@@ -149,7 +153,7 @@ func main() {
 	principalBuilder := principal.NewBuilder(userRepo, userRoleRepo, roleRepo, rolePermissionRepo)
 
 	// ── Interface: HTTP handler & router ──────────────────────────────────────
-	webAuthHandler := webhandler.NewAuthHandler(registerUC, loginUC, refreshTokenUC, changePasswordLocalUC, setPasswordLocalUC, requestIdentityOTPUC, verifyIdentityOTPUC, meUC, forgotPasswordUC, resetPasswordUC, requestChangeIdentityUC, confirmChangeIdentityUC, getSessionUC, logoutUC, getProfileUC)
+	webAuthHandler := webhandler.NewAuthHandler(registerUC, loginUC, refreshTokenUC, changePasswordLocalUC, setPasswordLocalUC, requestIdentityOTPUC, verifyIdentityOTPUC, meUC, forgotPasswordUC, resetPasswordUC, requestChangeIdentityUC, confirmChangeIdentityUC, getSessionUC, logoutUC, getProfileUC, updateProfileUC, checkUsernameUC, changeUsernameUC)
 	webRolePermissionHandler := webhandler.NewRolePermissionHandler(rolePermissionUseCases)
 	webUserManagementHandler := webhandler.NewUserManagementHandler(userManagementUseCases)
 

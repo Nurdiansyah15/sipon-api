@@ -100,6 +100,9 @@ func Setup(
 		protectedWeb.POST("/auth/change-email/confirm", webAuthHandler.ConfirmChangeEmail)
 		protectedWeb.POST("/auth/change-phone/request", webAuthHandler.RequestChangePhone)
 		protectedWeb.POST("/auth/change-phone/confirm", webAuthHandler.ConfirmChangePhone)
+		protectedWeb.PUT("/auth/profile", webAuthHandler.UpdateProfile)
+		protectedWeb.GET("/auth/check-username", webAuthHandler.CheckUsername)
+		protectedWeb.POST("/auth/change-username", webAuthHandler.ChangeUsername)
 
 		// ── User Management ───────────────────────────────────────────────────
 		// Dibawah /api/v1/web/users. Tiap route dipasangkan guard RequirePermission

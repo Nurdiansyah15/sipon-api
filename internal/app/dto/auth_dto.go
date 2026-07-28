@@ -134,3 +134,32 @@ type ConfirmChangePhoneRequest struct {
 type ChangeIdentityResponse struct {
 	Message string `json:"message"`
 }
+
+// ── Update Profile ───────────────────────────────────────────────────────────
+
+type UpdateProfileRequest struct {
+	Fullname *string `json:"fullname,omitempty"`
+	Email    *string `json:"email,omitempty"`
+	Phone    *string `json:"phone,omitempty"`
+}
+
+type UpdateProfileResponse struct {
+	Message string `json:"message"`
+}
+
+// ── Check Username ───────────────────────────────────────────────────────────
+
+type CheckUsernameResponse struct {
+	Available bool `json:"available"`
+}
+
+// ── Change Username ──────────────────────────────────────────────────────────
+
+type ChangeUsernameRequest struct {
+	Username string `json:"username" binding:"required,min=3,max=30"`
+}
+
+type ChangeUsernameResponse struct {
+	Message  string `json:"message"`
+	Username string `json:"username"`
+}
