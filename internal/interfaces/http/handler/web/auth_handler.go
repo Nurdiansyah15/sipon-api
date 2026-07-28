@@ -32,6 +32,9 @@ type AuthHandler struct {
 	updateProfile         *authUsecase.UpdateProfileUseCase
 	checkUsername         *authUsecase.CheckUsernameUseCase
 	changeUsername        *authUsecase.ChangeUsernameUseCase
+	avatarPresign         *authUsecase.AvatarPresignUseCase
+	avatarConfirm         *authUsecase.AvatarConfirmUseCase
+	avatarDelete          *authUsecase.AvatarDeleteUseCase
 }
 
 func NewAuthHandler(
@@ -53,6 +56,9 @@ func NewAuthHandler(
 	updateProfile *authUsecase.UpdateProfileUseCase,
 	checkUsername *authUsecase.CheckUsernameUseCase,
 	changeUsername *authUsecase.ChangeUsernameUseCase,
+	avatarPresign *authUsecase.AvatarPresignUseCase,
+	avatarConfirm *authUsecase.AvatarConfirmUseCase,
+	avatarDelete *authUsecase.AvatarDeleteUseCase,
 ) *AuthHandler {
 	return &AuthHandler{
 		register:              register,
@@ -73,6 +79,9 @@ func NewAuthHandler(
 		updateProfile:         updateProfile,
 		checkUsername:         checkUsername,
 		changeUsername:        changeUsername,
+		avatarPresign:         avatarPresign,
+		avatarConfirm:         avatarConfirm,
+		avatarDelete:          avatarDelete,
 	}
 }
 
@@ -503,6 +512,114 @@ func (h *AuthHandler) ChangeUsername(c *gin.Context) {
 	}
 
 	respond.OK(c, "change username success", resp)
+}
+
+// ── Avatar Upload ─────────────────────────────────────────────────────────
+
+// AvatarPresign godoc
+// @Summary Request presigned URL untuk upload avatar
+// @Description Membuat presigned URL unggah avatar langsung ke object storage.
+// @Tags Web/Auth
+// @Accept json
+// @Produce json
+// @Param request body dto.AvatarPresignRequest true "Content-type gambar"
+// @Success 200 {object} respond.SuccessBody{data=dto.AvatarPresignResponse}
+// @Failure 400 {object} respond.ErrorBody
+// @Failure 401 {object} respond.ErrorBody
+// @Failure 422 {object} respond.ErrorBody
+// @Failure 500 {object} respond.ErrorBody
+// @Security BearerAuth
+// @Router /api/v1/web/auth/profile/avatar/presign [post]
+// POST /api/v1/web/auth/profile/avatar/presign (protected)
+func (h *AuthHandler) AvatarPresign(c *gin.Context) {
+	var req dto.AvatarPresignRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httperror.Handle(c, err)
+		return
+	}
+
+	resp, err := h.avatarPresign.Execute(c.Request.Context(), req)
+	if err != nil {
+		httperror.Handle(c, err)
+		return
+	}
+
+	respond.OK(c, "avatar presign success", resp)
+}
+
+// AvatarConfirm godoc
+// @Summary Konfirmasi upload avatar
+// @Description Mengkonfirmasi bahwa avatar telah berhasil diupload ke object storage.
+// @Tags Web/Auth
+// @Produce json
+// @Param key query string true "Object key dari response presign"
+// @Success 200 {object} respond.SuccessBody{data=dto.AvatarConfirmResponse}
+// @Failure 400 {object} respond.ErrorBody
+// @Failure 401 {object} respond.ErrorBody
+// @Failure 404 {object} respond.ErrorBody
+// @Failure 422 {object} respond.ErrorBody
+// @Failure 500 {object} respond.ErrorBody
+// @Security BearerAuth
+// @Router /api/v1/web/auth/profile/avatar/confirm [post]
+// POST /api/v1/web/auth/profile/avatar/confirm?key=... (protected)
+func (h *AuthHandler) AvatarConfirm(c *gin.Context) {
+	userIDAny, ok := c.Get("user_id")
+	if !ok {
+		httperror.Handle(c, apperror.Unauthorized("unauthorized"))
+		return
+	}
+	userID, ok := userIDAny.(string)
+	if !ok {
+		httperror.Handle(c, apperror.Unauthorized("unauthorized"))
+		return
+	}
+
+	key := c.Query("key")
+	if key == "" {
+		httperror.Handle(c, apperror.Unprocessable("parameter key wajib diisi", nil))
+		return
+	}
+
+	resp, err := h.avatarConfirm.Execute(c.Request.Context(), userID, key)
+	if err != nil {
+		httperror.Handle(c, err)
+		return
+	}
+
+	respond.OK(c, "avatar confirm success", resp)
+}
+
+// AvatarDelete godoc
+// @Summary Hapus avatar
+// @Description Menghapus avatar user dari object storage dan database.
+// @Tags Web/Auth
+// @Produce json
+// @Success 200 {object} respond.SuccessBody
+// @Failure 401 {object} respond.ErrorBody
+// @Failure 404 {object} respond.ErrorBody
+// @Failure 500 {object} respond.ErrorBody
+// @Security BearerAuth
+// @Router /api/v1/web/auth/profile/avatar [delete]
+// DELETE /api/v1/web/auth/profile/avatar (protected)
+func (h *AuthHandler) AvatarDelete(c *gin.Context) {
+	userIDAny, ok := c.Get("user_id")
+	if !ok {
+		httperror.Handle(c, apperror.Unauthorized("unauthorized"))
+		return
+	}
+	userID, ok := userIDAny.(string)
+	if !ok {
+		httperror.Handle(c, apperror.Unauthorized("unauthorized"))
+		return
+	}
+
+	resp, err := h.avatarDelete.Execute(c.Request.Context(), userID)
+	if err != nil {
+		httperror.Handle(c, err)
+		return
+	}
+
+	respond.OK(c, "avatar delete success", resp)
 }
 
 // ForgotPassword godoc

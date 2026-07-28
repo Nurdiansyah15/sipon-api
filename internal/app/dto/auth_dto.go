@@ -86,7 +86,8 @@ type UserMe struct {
 	Status          string    `json:"status"`
 	CreatedAt       time.Time `json:"created_at"`
 	// HasPassword — false untuk akun yang belum pernah set password lokal.
-	HasPassword bool `json:"has_password"`
+	HasPassword bool    `json:"has_password"`
+	AvatarURL   *string `json:"avatar_url,omitempty"`
 }
 
 type RequestIdentityOTPResponse struct {
@@ -162,4 +163,20 @@ type ChangeUsernameRequest struct {
 type ChangeUsernameResponse struct {
 	Message  string `json:"message"`
 	Username string `json:"username"`
+}
+
+// ── Avatar Upload ────────────────────────────────────────────────────────────
+
+type AvatarPresignRequest struct {
+	ContentType string `json:"content_type" binding:"required"`
+}
+
+type AvatarPresignResponse struct {
+	PresignURL string `json:"presign_url"`
+	Key        string `json:"key"`
+	ExpiresIn  int    `json:"expires_in"`
+}
+
+type AvatarConfirmResponse struct {
+	AvatarURL string `json:"avatar_url"`
 }

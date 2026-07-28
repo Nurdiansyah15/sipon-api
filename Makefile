@@ -47,9 +47,13 @@ dev-down:
 dev-all-up:
 	docker compose -f docker-compose.dev.yml down
 	docker compose -f docker-compose.dev.yml up -d --wait
+# 	make minio-init
 
 dev-all-down:
 	docker compose -f docker-compose.dev.yml down
+
+minio-init:
+	docker compose -f docker-compose.dev.yml run --rm minio-init
 
 run:
 	docker compose -f docker-compose.dev.yml up app

@@ -7,17 +7,19 @@ import (
 
 	"sipon-api/internal/app/apperror"
 	"sipon-api/internal/app/dto"
+	"sipon-api/internal/app/port"
 	domainerr "sipon-api/internal/domain/errors"
 	userconstant "sipon-api/internal/domain/user/constant"
 	userrepo "sipon-api/internal/domain/user/repository"
 )
 
 type MeUseCase struct {
-	userRepo userrepo.UserRepository
+	userRepo     userrepo.UserRepository
+	fileUploader port.FileUploader
 }
 
-func NewMeUseCase(userRepo userrepo.UserRepository) *MeUseCase {
-	return &MeUseCase{userRepo: userRepo}
+func NewMeUseCase(userRepo userrepo.UserRepository, fileUploader port.FileUploader) *MeUseCase {
+	return &MeUseCase{userRepo: userRepo, fileUploader: fileUploader}
 }
 
 // Required — role: any | perm: - | benefit: -
@@ -73,5 +75,6 @@ func (uc *MeUseCase) Execute(ctx context.Context, userID string) (*dto.UserMe, e
 		Status:          string(user.Status),
 		CreatedAt:       user.CreatedAt,
 		HasPassword:     user.HasLocalPassword(),
+		AvatarURL:       resolveAvatarURL(uc.fileUploader, user.AvatarKey),
 	}, nil
 }

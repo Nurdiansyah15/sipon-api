@@ -103,6 +103,9 @@ func Setup(
 		protectedWeb.PUT("/auth/profile", webAuthHandler.UpdateProfile)
 		protectedWeb.GET("/auth/check-username", webAuthHandler.CheckUsername)
 		protectedWeb.POST("/auth/change-username", webAuthHandler.ChangeUsername)
+		protectedWeb.POST("/auth/profile/avatar/presign", webAuthHandler.AvatarPresign)
+		protectedWeb.POST("/auth/profile/avatar/confirm", webAuthHandler.AvatarConfirm)
+		protectedWeb.DELETE("/auth/profile/avatar", webAuthHandler.AvatarDelete)
 
 		// ── User Management ───────────────────────────────────────────────────
 		// Dibawah /api/v1/web/users. Tiap route dipasangkan guard RequirePermission

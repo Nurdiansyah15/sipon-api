@@ -7,6 +7,7 @@ import (
 
 	"sipon-api/internal/app/apperror"
 	"sipon-api/internal/app/dto"
+	"sipon-api/internal/app/port"
 	"sipon-api/internal/app/service/principal"
 	domainerr "sipon-api/internal/domain/errors"
 	userconstant "sipon-api/internal/domain/user/constant"
@@ -14,11 +15,12 @@ import (
 )
 
 type GetProfileUseCase struct {
-	userRepo userrepo.UserRepository
+	userRepo     userrepo.UserRepository
+	fileUploader port.FileUploader
 }
 
-func NewGetProfileUseCase(userRepo userrepo.UserRepository) *GetProfileUseCase {
-	return &GetProfileUseCase{userRepo: userRepo}
+func NewGetProfileUseCase(userRepo userrepo.UserRepository, fileUploader port.FileUploader) *GetProfileUseCase {
+	return &GetProfileUseCase{userRepo: userRepo, fileUploader: fileUploader}
 }
 
 // Required — role: any | perm: - | benefit: -
@@ -93,6 +95,7 @@ func (uc *GetProfileUseCase) Execute(ctx context.Context, userID string, p *prin
 		Status:          string(user.Status),
 		HasPassword:     user.HasLocalPassword(),
 		CreatedAt:       user.CreatedAt,
+		AvatarURL:       resolveAvatarURL(uc.fileUploader, user.AvatarKey),
 		Roles:           roles,
 		Permissions:     permissions,
 	}, nil

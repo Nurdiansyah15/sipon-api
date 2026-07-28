@@ -25,6 +25,7 @@ import (
 	"sipon-api/internal/infrastructure/external/bcrypt"
 	"sipon-api/internal/infrastructure/external/fonnte"
 	extjwt "sipon-api/internal/infrastructure/external/jwt"
+	"sipon-api/internal/infrastructure/external/minio"
 	"sipon-api/internal/infrastructure/external/otpgen"
 	extsmtp "sipon-api/internal/infrastructure/external/smtp"
 	"sipon-api/internal/infrastructure/persistence"
@@ -99,6 +100,25 @@ func main() {
 	// ── Infrastructure: transactor ───────────────────────────────────────────
 	transactor := persistence.NewPostgresTransactor(db)
 
+	// ── Infrastructure: MinIO (Object Storage) ──────────────────────────────
+	var fileUploader port.FileUploader
+	if cfg.Minio.Endpoint != "" {
+		fu, err := minio.NewMinioFileUploader(
+			cfg.Minio.Endpoint, cfg.Minio.AccessKey, cfg.Minio.SecretKey,
+			cfg.Minio.Bucket, cfg.Minio.PrivateBucket, cfg.Minio.UseSSL,
+		)
+		if err != nil {
+			logger.Warn("MinIO file uploader gagal diinisialisasi, fallback ke noop", slog.Any("error", err))
+			fileUploader = minio.NewNoopFileUploader()
+		} else {
+			fileUploader = fu
+			logger.Info("MinIO file uploader aktif", slog.String("endpoint", cfg.Minio.Endpoint), slog.String("bucket", cfg.Minio.Bucket))
+		}
+	} else {
+		logger.Warn("MinIO tidak dikonfigurasi, file uploader dinonaktifkan (noop)")
+		fileUploader = minio.NewNoopFileUploader()
+	}
+
 	// ── Redis ─────────────────────────────────────────────────────────────────
 	redisClient := redis.NewClient(&redis.Options{Addr: cfg.Redis.Addr})
 	if err := redisClient.Ping(context.Background()).Err(); err != nil {
@@ -119,19 +139,23 @@ func main() {
 	setPasswordLocalUC := authUsecase.NewSetPasswordLocalUseCase(userRepo, hasher)
 	requestIdentityOTPUC := authUsecase.NewRequestIdentityOTPUseCase(userRepo, verifRepo, otpGen, emailSender, smsSender)
 	verifyIdentityOTPUC := authUsecase.NewVerifyIdentityOTPUseCase(userRepo, verifRepo)
-	meUC := authUsecase.NewMeUseCase(userRepo)
+	meUC := authUsecase.NewMeUseCase(userRepo, fileUploader)
 	forgotPasswordUC := authUsecase.NewForgotPasswordUseCase(userRepo, verifRepo, otpGen, emailSender)
 	resetPasswordUC := authUsecase.NewResetPasswordUseCase(userRepo, verifRepo, hasher)
 	requestChangeIdentityUC := authUsecase.NewRequestChangeIdentityUseCase(userRepo, verifRepo, otpGen, emailSender, smsSender)
 	confirmChangeIdentityUC := authUsecase.NewConfirmChangeIdentityUseCase(userRepo, verifRepo, transactor)
 	getSessionUC := authUsecase.NewGetSessionUseCase(userRepo)
-	getProfileUC := authUsecase.NewGetProfileUseCase(userRepo)
+	getProfileUC := authUsecase.NewGetProfileUseCase(userRepo, fileUploader)
 	logoutUC := authUsecase.NewLogoutUseCase(sessionRevocationStore, cfg.JWT.AccessTokenTTL)
 	registerUC := authUsecase.NewRegisterUseCase(userRepo, verifRepo, hasher, otpGen, emailSender, smsSender, tokenGen, transactor, roleRepo, userRoleRepo)
 
 	updateProfileUC := authUsecase.NewUpdateProfileUseCase(userRepo)
 	checkUsernameUC := authUsecase.NewCheckUsernameUseCase(userRepo)
 	changeUsernameUC := authUsecase.NewChangeUsernameUseCase(userRepo)
+
+	avatarPresignUC := authUsecase.NewAvatarPresignUseCase(fileUploader)
+	avatarConfirmUC := authUsecase.NewAvatarConfirmUseCase(userRepo, transactor, fileUploader)
+	avatarDeleteUC := authUsecase.NewAvatarDeleteUseCase(userRepo, fileUploader)
 
 	rolePermissionUseCases := rolePermissionUsecase.NewUseCases(rolePermissionUsecase.Dependencies{
 		RoleRepo:           roleRepo,
@@ -153,7 +177,7 @@ func main() {
 	principalBuilder := principal.NewBuilder(userRepo, userRoleRepo, roleRepo, rolePermissionRepo)
 
 	// ── Interface: HTTP handler & router ──────────────────────────────────────
-	webAuthHandler := webhandler.NewAuthHandler(registerUC, loginUC, refreshTokenUC, changePasswordLocalUC, setPasswordLocalUC, requestIdentityOTPUC, verifyIdentityOTPUC, meUC, forgotPasswordUC, resetPasswordUC, requestChangeIdentityUC, confirmChangeIdentityUC, getSessionUC, logoutUC, getProfileUC, updateProfileUC, checkUsernameUC, changeUsernameUC)
+	webAuthHandler := webhandler.NewAuthHandler(registerUC, loginUC, refreshTokenUC, changePasswordLocalUC, setPasswordLocalUC, requestIdentityOTPUC, verifyIdentityOTPUC, meUC, forgotPasswordUC, resetPasswordUC, requestChangeIdentityUC, confirmChangeIdentityUC, getSessionUC, logoutUC, getProfileUC, updateProfileUC, checkUsernameUC, changeUsernameUC, avatarPresignUC, avatarConfirmUC, avatarDeleteUC)
 	webRolePermissionHandler := webhandler.NewRolePermissionHandler(rolePermissionUseCases)
 	webUserManagementHandler := webhandler.NewUserManagementHandler(userManagementUseCases)
 

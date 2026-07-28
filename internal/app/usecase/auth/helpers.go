@@ -1,7 +1,9 @@
 package authUsecase
 
 import (
+	"context"
 	"errors"
+	"strings"
 
 	"sipon-api/internal/app/apperror"
 	"sipon-api/internal/app/dto"
@@ -65,6 +67,36 @@ func issueTokenPair(user *entity.User, deviceID string, tokenGen port.TokenGener
 			Status:          string(user.Status),
 			CreatedAt:       user.CreatedAt,
 			HasPassword:     user.HasLocalPassword(),
+			AvatarURL:       resolveAvatarURL(nil, user.AvatarKey),
 		},
 	}, nil
+}
+
+// resolveAvatarURL mengkonversi avatar key ke public URL.
+// Gunakan nil fileUploader jika tidak tersedia (contoh: saat login/register
+// sebelum fileUploader di-inject). Pattern dari CLAUDE.md §10.
+func resolveAvatarURL(fileUploader port.FileUploader, key *string) *string {
+	if key == nil {
+		return nil
+	}
+	v := strings.TrimSpace(*key)
+	if v == "" {
+		return nil
+	}
+	if strings.Contains(v, "://") {
+		return &v // sudah full URL
+	}
+	if fileUploader != nil {
+		url := fileUploader.PublicURL(v)
+		return &url
+	}
+	return key
+}
+
+// markAvatarDeleted menandai avatar lama sebagai deleted (best-effort).
+func markAvatarDeleted(ctx context.Context, fileUploader port.FileUploader, key *string) {
+	if fileUploader == nil || key == nil || *key == "" {
+		return
+	}
+	_ = fileUploader.MarkDeleted(ctx, *key)
 }

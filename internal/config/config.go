@@ -18,6 +18,7 @@ type Config struct {
 	Redis     RedisConfig
 	RateLimit RateLimitConfig
 	Migration MigrationConfig
+	Minio     MinioConfig
 }
 
 type RedisConfig struct {
@@ -71,6 +72,15 @@ type FonnteConfig struct {
 
 type MigrationConfig struct {
 	MigrationsDir string
+}
+
+type MinioConfig struct {
+	Endpoint      string
+	AccessKey     string
+	SecretKey     string
+	Bucket        string
+	PrivateBucket string
+	UseSSL        bool
 }
 
 func Load() (*Config, error) {
@@ -129,6 +139,14 @@ func Load() (*Config, error) {
 		},
 		Migration: MigrationConfig{
 			MigrationsDir: getEnv("MIGRATIONS_DIR", "migrations"),
+		},
+		Minio: MinioConfig{
+			Endpoint:      getEnv("MINIO_ENDPOINT", ""),
+			AccessKey:     getEnv("MINIO_ACCESS_KEY", ""),
+			SecretKey:     getEnv("MINIO_SECRET_KEY", ""),
+			Bucket:        getEnv("MINIO_BUCKET", "sipon-public"),
+			PrivateBucket: getEnv("MINIO_PRIVATE_BUCKET", "sipon-private"),
+			UseSSL:        getEnv("MINIO_USE_SSL", "false") == "true",
 		},
 	}
 	return cfg, nil

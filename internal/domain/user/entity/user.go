@@ -15,6 +15,7 @@ type User struct {
 	Fullname            *string
 	Email               valueobject.Email
 	PhoneNumber         *valueobject.PhoneNumber
+	AvatarKey           *string
 	Status              constant.UserStatus
 	Credentials         []*Credential
 	CreatedAt           time.Time

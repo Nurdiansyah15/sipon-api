@@ -16,6 +16,7 @@ type ProfileResponse struct {
 	Status          string              `json:"status"`
 	HasPassword     bool                `json:"has_password"`
 	CreatedAt       time.Time           `json:"created_at"`
+	AvatarURL       *string             `json:"avatar_url,omitempty"`
 	Roles           []SessionRole       `json:"roles"`
 	Permissions     []SessionPermission `json:"permissions"`
 }

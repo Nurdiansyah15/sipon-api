@@ -26,6 +26,7 @@ import (
 	"sipon-api/internal/config"
 	"sipon-api/internal/infrastructure/external/bcrypt"
 	extjwt "sipon-api/internal/infrastructure/external/jwt"
+	"sipon-api/internal/infrastructure/external/minio"
 	"sipon-api/internal/infrastructure/external/otpgen"
 	extsmtp "sipon-api/internal/infrastructure/external/smtp"
 	"sipon-api/internal/infrastructure/persistence"
@@ -72,6 +73,7 @@ func MustStartTestServer() (*TestServer, func()) {
 	transactor := persistence.NewPostgresTransactor(db)
 
 	// ── Infrastructure: external services (no-op/in-memory untuk test) ─────
+	fileUploader := minio.NewNoopFileUploader()
 	hasher := bcrypt.NewBcryptPasswordHasher()
 	tokenGen := extjwt.NewJWTTokenGenerator("test-jwt-secret-key-for-testing-only", 24*time.Hour, 30*24*time.Hour)
 	sessionRevocationStore := newFakeSessionRevocationStore()
@@ -86,19 +88,23 @@ func MustStartTestServer() (*TestServer, func()) {
 	setPasswordLocalUC := authUsecase.NewSetPasswordLocalUseCase(userRepo, hasher)
 	requestIdentityOTPUC := authUsecase.NewRequestIdentityOTPUseCase(userRepo, verifRepo, otpGenerator, emailSender, smsSender)
 	verifyIdentityOTPUC := authUsecase.NewVerifyIdentityOTPUseCase(userRepo, verifRepo)
-	meUC := authUsecase.NewMeUseCase(userRepo)
+	meUC := authUsecase.NewMeUseCase(userRepo, fileUploader)
 	forgotPasswordUC := authUsecase.NewForgotPasswordUseCase(userRepo, verifRepo, otpGenerator, emailSender)
 	resetPasswordUC := authUsecase.NewResetPasswordUseCase(userRepo, verifRepo, hasher)
 	requestChangeIdentityUC := authUsecase.NewRequestChangeIdentityUseCase(userRepo, verifRepo, otpGenerator, emailSender, smsSender)
 	confirmChangeIdentityUC := authUsecase.NewConfirmChangeIdentityUseCase(userRepo, verifRepo, transactor)
 	getSessionUC := authUsecase.NewGetSessionUseCase(userRepo)
-	getProfileUC := authUsecase.NewGetProfileUseCase(userRepo)
+	getProfileUC := authUsecase.NewGetProfileUseCase(userRepo, fileUploader)
 	logoutUC := authUsecase.NewLogoutUseCase(sessionRevocationStore, 24*time.Hour)
 	registerUC := authUsecase.NewRegisterUseCase(userRepo, verifRepo, hasher, otpGenerator, emailSender, smsSender, tokenGen, transactor, roleRepo, userRoleRepo)
 
 	updateProfileUC := authUsecase.NewUpdateProfileUseCase(userRepo)
 	checkUsernameUC := authUsecase.NewCheckUsernameUseCase(userRepo)
 	changeUsernameUC := authUsecase.NewChangeUsernameUseCase(userRepo)
+
+	avatarPresignUC := authUsecase.NewAvatarPresignUseCase(fileUploader)
+	avatarConfirmUC := authUsecase.NewAvatarConfirmUseCase(userRepo, transactor, fileUploader)
+	avatarDeleteUC := authUsecase.NewAvatarDeleteUseCase(userRepo, fileUploader)
 
 	rolePermissionUseCases := rolePermissionUsecase.NewUseCases(rolePermissionUsecase.Dependencies{
 		RoleRepo:           roleRepo,
@@ -119,7 +125,7 @@ func MustStartTestServer() (*TestServer, func()) {
 	principalBuilder := principal.NewBuilder(userRepo, userRoleRepo, roleRepo, rolePermissionRepo)
 
 	// ── HTTP handlers & router ──────────────────────────────────────────────
-	webAuthHandler := webhandler.NewAuthHandler(registerUC, loginUC, refreshTokenUC, changePasswordLocalUC, setPasswordLocalUC, requestIdentityOTPUC, verifyIdentityOTPUC, meUC, forgotPasswordUC, resetPasswordUC, requestChangeIdentityUC, confirmChangeIdentityUC, getSessionUC, logoutUC, getProfileUC, updateProfileUC, checkUsernameUC, changeUsernameUC)
+	webAuthHandler := webhandler.NewAuthHandler(registerUC, loginUC, refreshTokenUC, changePasswordLocalUC, setPasswordLocalUC, requestIdentityOTPUC, verifyIdentityOTPUC, meUC, forgotPasswordUC, resetPasswordUC, requestChangeIdentityUC, confirmChangeIdentityUC, getSessionUC, logoutUC, getProfileUC, updateProfileUC, checkUsernameUC, changeUsernameUC, avatarPresignUC, avatarConfirmUC, avatarDeleteUC)
 	webRolePermHandler := webhandler.NewRolePermissionHandler(rolePermissionUseCases)
 	webUserManagementHandler := webhandler.NewUserManagementHandler(userManagementUseCases)
 

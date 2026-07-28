@@ -35,9 +35,9 @@ func (r *PostgresUserRepository) Save(ctx context.Context, user *entity.User) er
 	}
 
 	_, err := execFromContext(ctx, r.db).ExecContext(ctx, `
-		INSERT INTO users (id, username, fullname, email, phone, status, created_at, updated_at, last_login_at, deleted_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-		user.ID, user.Username.Value(), user.Fullname, user.Email.Value(), phone,
+		INSERT INTO users (id, username, fullname, email, phone, avatar_key, status, created_at, updated_at, last_login_at, deleted_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+		user.ID, user.Username.Value(), user.Fullname, user.Email.Value(), phone, user.AvatarKey,
 		string(user.Status), user.CreatedAt, user.UpdatedAt, user.LastLoginAt, user.DeletedAt,
 	)
 	if err != nil {
@@ -56,7 +56,7 @@ func (r *PostgresUserRepository) Save(ctx context.Context, user *entity.User) er
 
 func (r *PostgresUserRepository) FindByID(ctx context.Context, id string) (*entity.User, error) {
 	row := execFromContext(ctx, r.db).QueryRowContext(ctx,
-		`SELECT u.id, u.username, u.fullname, u.email, u.phone, u.status, u.created_at, u.updated_at, u.last_login_at, u.deleted_at, u.failed_login_attempts, u.locked_until
+		`SELECT u.id, u.username, u.fullname, u.email, u.phone, u.avatar_key, u.status, u.created_at, u.updated_at, u.last_login_at, u.deleted_at, u.failed_login_attempts, u.locked_until
 		 FROM users u
 		 WHERE u.id = $1`, id)
 
@@ -106,7 +106,7 @@ func (r *PostgresUserRepository) findByIdentityValue(ctx context.Context, kind u
 
 func (r *PostgresUserRepository) FindByUsername(ctx context.Context, username string) (*entity.User, error) {
 	row := execFromContext(ctx, r.db).QueryRowContext(ctx,
-		`SELECT u.id, u.username, u.fullname, u.email, u.phone, u.status, u.created_at, u.updated_at, u.last_login_at, u.deleted_at, u.failed_login_attempts, u.locked_until
+		`SELECT u.id, u.username, u.fullname, u.email, u.phone, u.avatar_key, u.status, u.created_at, u.updated_at, u.last_login_at, u.deleted_at, u.failed_login_attempts, u.locked_until
 		 FROM users u
 		 WHERE u.username = $1`, username)
 
@@ -131,9 +131,9 @@ func (r *PostgresUserRepository) Update(ctx context.Context, user *entity.User) 
 	}
 
 _, err := execFromContext(ctx, r.db).ExecContext(ctx, `
-	UPDATE users SET fullname=$1, email=$2, phone=$3, status=$4, updated_at=$5, last_login_at=$6, deleted_at=$7,
-	failed_login_attempts=$8, locked_until=$9 WHERE id=$10`,
-		user.Fullname, user.Email.Value(), phone, string(user.Status), user.UpdatedAt, user.LastLoginAt, user.DeletedAt,
+	UPDATE users SET fullname=$1, email=$2, phone=$3, avatar_key=$4, status=$5, updated_at=$6, last_login_at=$7, deleted_at=$8,
+	failed_login_attempts=$9, locked_until=$10 WHERE id=$11`,
+		user.Fullname, user.Email.Value(), phone, user.AvatarKey, string(user.Status), user.UpdatedAt, user.LastLoginAt, user.DeletedAt,
 		user.FailedLoginAttempts, user.LockedUntil, user.ID,
 	)
 	if err != nil {
@@ -195,6 +195,7 @@ func scanUser(row *sql.Row) (*entity.User, error) {
 		fullname             sql.NullString
 		email                sql.NullString
 		phone                sql.NullString
+		avatarKey            sql.NullString
 		status               string
 		createdAt, updatedAt time.Time
 		lastLoginAt          sql.NullTime
@@ -202,16 +203,16 @@ func scanUser(row *sql.Row) (*entity.User, error) {
 		failedLoginAttempts  int
 		lockedUntil          sql.NullTime
 	)
-	if err := row.Scan(&id, &username, &fullname, &email, &phone, &status, &createdAt, &updatedAt, &lastLoginAt, &deletedAt, &failedLoginAttempts, &lockedUntil); err != nil {
+	if err := row.Scan(&id, &username, &fullname, &email, &phone, &avatarKey, &status, &createdAt, &updatedAt, &lastLoginAt, &deletedAt, &failedLoginAttempts, &lockedUntil); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, domainerr.New(userConstant.CodeUserNotFound)
 		}
 		return nil, domainerr.Wrap(userConstant.CodeUserQueryFailed, err)
 	}
-	return buildUserEntity(id, username, fullname, email, phone, status, createdAt, updatedAt, lastLoginAt, deletedAt, failedLoginAttempts, lockedUntil), nil
+	return buildUserEntity(id, username, fullname, email, phone, avatarKey, status, createdAt, updatedAt, lastLoginAt, deletedAt, failedLoginAttempts, lockedUntil), nil
 }
 
-func buildUserEntity(id, username string, fullname sql.NullString, email, phone sql.NullString, status string, createdAt, updatedAt time.Time, lastLoginAt, deletedAt sql.NullTime, failedLoginAttempts int, lockedUntil sql.NullTime) *entity.User {
+func buildUserEntity(id, username string, fullname sql.NullString, email, phone, avatarKey sql.NullString, status string, createdAt, updatedAt time.Time, lastLoginAt, deletedAt sql.NullTime, failedLoginAttempts int, lockedUntil sql.NullTime) *entity.User {
 	uname, _ := valueobject.NewUsername(username)
 	u := &entity.User{
 		ID:                  id,
@@ -236,6 +237,10 @@ func buildUserEntity(id, username string, fullname sql.NullString, email, phone 
 		if err == nil {
 			u.PhoneNumber = parsedPhone
 		}
+	}
+	if avatarKey.Valid && avatarKey.String != "" {
+		v := avatarKey.String
+		u.AvatarKey = &v
 	}
 	if lastLoginAt.Valid {
 		t := lastLoginAt.Time
