@@ -43,6 +43,11 @@ func (uc *LoginUseCase) Execute(ctx context.Context, req dto.LoginRequest) (*dto
 
 	user, err := uc.userRepo.FindByLoginIdentifier(ctx, identifier)
 	if err != nil {
+		if identifier.Kind() == usererr.LoginIdentifierNIS {
+			user, err = uc.userRepo.FindByIdentity(ctx, usererr.LoginIdentifierUsername, identifier.Value())
+		}
+	}
+	if err != nil {
 		var de *domainerr.DomainError
 		if errors.As(err, &de) {
 			switch de.Code {

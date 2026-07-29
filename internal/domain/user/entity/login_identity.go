@@ -95,6 +95,8 @@ func normalizeLoginIdentityValue(kind constant.LoginIdentifierKind, rawValue str
 			return "", err
 		}
 		return username.Value(), nil
+	case constant.LoginIdentifierNIS:
+		return rawValue, nil
 	default:
 		return "", domainerr.New(constant.CodeInvalidLoginIdentifier)
 	}

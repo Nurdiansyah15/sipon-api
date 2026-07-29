@@ -22,6 +22,7 @@ import (
 	"sipon-api/internal/app/service/principal"
 	authUsecase "sipon-api/internal/app/usecase/auth"
 	rolePermissionUsecase "sipon-api/internal/app/usecase/rolepermission"
+	santriUsecase "sipon-api/internal/app/usecase/santri"
 	userManagementUsecase "sipon-api/internal/app/usecase/usermanagement"
 	"sipon-api/internal/config"
 	"sipon-api/internal/infrastructure/external/bcrypt"
@@ -71,6 +72,9 @@ func MustStartTestServer() (*TestServer, func()) {
 	rolePermissionReadModel := persistence.NewPostgresRoleQuery(db)
 	userReadModel := persistence.NewPostgresUserQuery(db)
 	roleScopeRepo := persistence.NewPostgresRoleScopeRepository(db)
+	santriRepo := persistence.NewPostgresSantriRepository(db)
+	santriDokumenRepo := persistence.NewPostgresSantriDokumenRepository(db)
+	santriRequestRepo := persistence.NewPostgresSantriRequestRepository(db)
 	transactor := persistence.NewPostgresTransactor(db)
 
 	// ── Infrastructure: external services (no-op/in-memory untuk test) ─────
@@ -122,6 +126,16 @@ func MustStartTestServer() (*TestServer, func()) {
 		Hasher:    hasher,
 	})
 
+	santriUseCases := santriUsecase.NewUseCases(santriUsecase.Dependencies{
+		SantriRepo:        santriRepo,
+		SantriDokumenRepo: santriDokumenRepo,
+		SantriRequestRepo: santriRequestRepo,
+		UserRepo:          userRepo,
+		FileUploader:      fileUploader,
+		Hasher:            hasher,
+		Transactor:        transactor,
+	})
+
 	// ── Principal builder & cache ───────────────────────────────────────────
 	principalCache := noopPrincipalCache{}
 	principalBuilder := principal.NewBuilder(userRepo, userRoleRepo, roleRepo, rolePermissionRepo, roleScopeRepo)
@@ -130,12 +144,13 @@ func MustStartTestServer() (*TestServer, func()) {
 	webAuthHandler := webhandler.NewAuthHandler(registerUC, loginUC, refreshTokenUC, changePasswordLocalUC, setPasswordLocalUC, requestIdentityOTPUC, verifyIdentityOTPUC, meUC, forgotPasswordUC, resetPasswordUC, requestChangeIdentityUC, confirmChangeIdentityUC, getSessionUC, logoutUC, getProfileUC, updateProfileUC, checkUsernameUC, changeUsernameUC, avatarPresignUC, avatarConfirmUC, avatarDeleteUC)
 	webRolePermHandler := webhandler.NewRolePermissionHandler(rolePermissionUseCases)
 	webUserManagementHandler := webhandler.NewUserManagementHandler(userManagementUseCases)
+	webSantriHandler := webhandler.NewSantriHandler(santriUseCases)
 
 	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelWarn}))
 	rlCfg := config.RateLimitConfig{Enabled: false}
 
 	engine := router.Setup(
-		webAuthHandler, webRolePermHandler, webUserManagementHandler,
+		webAuthHandler, webRolePermHandler, webUserManagementHandler, webSantriHandler,
 		tokenGen, sessionRevocationStore, principalBuilder, principalCache,
 		nil, rlCfg, "test", logger,
 	)

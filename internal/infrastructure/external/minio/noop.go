@@ -33,6 +33,10 @@ func (n *NoopFileUploader) KeyFromURL(url string) string {
 	return url
 }
 
+func (n *NoopFileUploader) GeneratePresignedDownloadURL(_ context.Context, key string, _ port.PrivacyRule, _ time.Duration) (string, error) {
+	return key, nil
+}
+
 func (n *NoopFileUploader) DeleteObject(_ context.Context, _ string, _ port.PrivacyRule) error {
 	return nil
 }

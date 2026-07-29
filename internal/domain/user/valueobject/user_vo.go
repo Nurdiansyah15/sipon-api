@@ -12,6 +12,7 @@ import (
 
 var emailRe = regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
 var phoneNumberRe = regexp.MustCompile(`^\+[1-9][0-9]{7,14}$`)
+var nisPatternRe = regexp.MustCompile(`^1000[12][0-9]{5}$`)
 
 type Email struct {
 	value string
@@ -170,6 +171,9 @@ func NewLoginIdentifier(raw string) (LoginIdentifier, error) {
 	}
 	if phone, err := NewPhoneNumber(v); err == nil {
 		return LoginIdentifier{kind: constant.LoginIdentifierPhone, value: phone.Value()}, nil
+	}
+	if nisPatternRe.MatchString(v) {
+		return LoginIdentifier{kind: constant.LoginIdentifierNIS, value: v}, nil
 	}
 	if username, err := NewUsername(v); err == nil {
 		return LoginIdentifier{kind: constant.LoginIdentifierUsername, value: username.Value()}, nil

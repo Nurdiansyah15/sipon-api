@@ -19,6 +19,7 @@ import (
 	"sipon-api/internal/app/service/principal"
 	authUsecase "sipon-api/internal/app/usecase/auth"
 	rolePermissionUsecase "sipon-api/internal/app/usecase/rolepermission"
+	santriUsecase "sipon-api/internal/app/usecase/santri"
 	userManagementUsecase "sipon-api/internal/app/usecase/usermanagement"
 	"sipon-api/internal/config"
 	"sipon-api/internal/infrastructure/cache"
@@ -76,6 +77,9 @@ func main() {
 	rolePermissionReadModel := persistence.NewPostgresRoleQuery(db)
 	userReadModel := persistence.NewPostgresUserQuery(db)
 	roleScopeRepo := persistence.NewPostgresRoleScopeRepository(db)
+	santriRepo := persistence.NewPostgresSantriRepository(db)
+	santriDokumenRepo := persistence.NewPostgresSantriDokumenRepository(db)
+	santriRequestRepo := persistence.NewPostgresSantriRequestRepository(db)
 
 	// ── Infrastructure: external services ────────────────────────────────────
 	hasher := bcrypt.NewBcryptPasswordHasher()
@@ -173,6 +177,16 @@ func main() {
 		Hasher:    hasher,
 	})
 
+	santriUseCases := santriUsecase.NewUseCases(santriUsecase.Dependencies{
+		SantriRepo:        santriRepo,
+		SantriDokumenRepo: santriDokumenRepo,
+		SantriRequestRepo: santriRequestRepo,
+		UserRepo:          userRepo,
+		FileUploader:      fileUploader,
+		Hasher:            hasher,
+		Transactor:        transactor,
+	})
+
 	// ── Principal builder & cache ─────────────────────────────────────────────
 	principalCache := cache.NewRedisPrincipalCache(redisClient)
 	rateLimiter := cache.NewRedisRateLimiter(redisClient)
@@ -182,9 +196,10 @@ func main() {
 	webAuthHandler := webhandler.NewAuthHandler(registerUC, loginUC, refreshTokenUC, changePasswordLocalUC, setPasswordLocalUC, requestIdentityOTPUC, verifyIdentityOTPUC, meUC, forgotPasswordUC, resetPasswordUC, requestChangeIdentityUC, confirmChangeIdentityUC, getSessionUC, logoutUC, getProfileUC, updateProfileUC, checkUsernameUC, changeUsernameUC, avatarPresignUC, avatarConfirmUC, avatarDeleteUC)
 	webRolePermissionHandler := webhandler.NewRolePermissionHandler(rolePermissionUseCases)
 	webUserManagementHandler := webhandler.NewUserManagementHandler(userManagementUseCases)
+	webSantriHandler := webhandler.NewSantriHandler(santriUseCases)
 
 	engine := router.Setup(
-		webAuthHandler, webRolePermissionHandler, webUserManagementHandler,
+		webAuthHandler, webRolePermissionHandler, webUserManagementHandler, webSantriHandler,
 		tokenGen, sessionRevocationStore, principalBuilder, principalCache,
 		rateLimiter, cfg.RateLimit, cfg.App.Env, logger,
 	)

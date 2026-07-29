@@ -22,6 +22,7 @@ func Setup(
 	webAuthHandler *webhandler.AuthHandler,
 	webRolePermissionHandler *webhandler.RolePermissionHandler,
 	webUserManagementHandler *webhandler.UserManagementHandler,
+	webSantriHandler *webhandler.SantriHandler,
 	tokenGen port.TokenGenerator,
 	sessionRevocationStore port.SessionRevocationStore,
 	principalBuilder *principal.Builder,
@@ -161,6 +162,32 @@ func Setup(
 			rolePermission.GET("/roles/:role_id/scopes", readRoleGuard, webRolePermissionHandler.ListRoleScopes)
 			rolePermission.POST("/roles/:role_id/scopes", middleware.RequirePermission(string(roleconstant.PermissionManageRolePermissions)), webRolePermissionHandler.AssignRoleScope)
 			rolePermission.DELETE("/roles/:role_id/scopes/:scope_id", middleware.RequirePermission(string(roleconstant.PermissionManageRolePermissions)), webRolePermissionHandler.RemoveRoleScope)
+		}
+
+		// ── Santri ─────────────────────────────────────────────────────────
+		santri := protectedWeb.Group("/santri")
+		{
+			santri.GET("/profile", webSantriHandler.GetSantri)
+			santri.PUT("/profile", webSantriHandler.UpdateSantri)
+			santri.POST("/request", webSantriHandler.RequestSantri)
+
+			santri.POST("/dokumen/presign", webSantriHandler.DokumenPresign)
+			santri.POST("/dokumen/confirm", webSantriHandler.DokumenConfirm)
+			santri.GET("/dokumen", webSantriHandler.DokumenList)
+			santri.GET("/dokumen/:id/access", webSantriHandler.DokumenAccess)
+			santri.DELETE("/dokumen/:id", webSantriHandler.DokumenDelete)
+
+			santriAdmin := santri.Group("/admin")
+			santriAdmin.Use(middleware.RequirePermission(string(roleconstant.PermissionManageUsers)))
+			{
+				santriAdmin.GET("", webSantriHandler.ListSantri)
+				santriAdmin.POST("", webSantriHandler.CreateSantri)
+				santriAdmin.GET("/requests", webSantriHandler.ListSantriRequests)
+				santriAdmin.POST("/requests/:id/approve", webSantriHandler.ApproveSantriRequest)
+				santriAdmin.POST("/requests/:id/reject", webSantriHandler.RejectSantriRequest)
+				santriAdmin.POST("/verify/:id", webSantriHandler.DokumenVerify)
+				santriAdmin.POST("/reject/:id", webSantriHandler.DokumenReject)
+			}
 		}
 	}
 

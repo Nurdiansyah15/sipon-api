@@ -112,6 +112,16 @@ func (u *MinioFileUploader) KeyFromURL(url string) string {
 	return url
 }
 
+func (u *MinioFileUploader) GeneratePresignedDownloadURL(ctx context.Context, key string, privacy port.PrivacyRule, expiry time.Duration) (string, error) {
+	bucket := u.resolveBucket(privacy)
+	cleaned := strings.TrimPrefix(key, "/")
+	presignURL, err := u.client.PresignedGetObject(ctx, bucket, cleaned, expiry, nil)
+	if err != nil {
+		return "", fmt.Errorf("minio: gagal membuat presigned download URL: %w", err)
+	}
+	return presignURL.String(), nil
+}
+
 func (u *MinioFileUploader) DeleteObject(ctx context.Context, key string, privacy port.PrivacyRule) error {
 	bucket := u.resolveBucket(privacy)
 	cleaned := strings.TrimPrefix(key, "/")

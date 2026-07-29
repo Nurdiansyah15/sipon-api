@@ -1,0 +1,109 @@
+{
+  "data_pribadi": {
+    "fullname": "string | Nama Lengkap",
+    "nickname": "string | Nama Panggilan",
+    "program": "string | Program (read-only)",
+    "option": "string | Jenis Kelamin (1=Laki-laki, 2=Perempuan) (read-only)",
+    "hobby": "string | Hobi",
+    "purpose": "string | Cita-cita",
+    "motivation_entry": "string | Motivasi Masuk Pondok",
+    "pob": "string | Tempat Lahir",
+    "dob": "date | Tanggal Lahir",
+    "blood": "string | Golongan Darah"
+  },
+  "kontak": {
+    "email": "email | Email",
+    "phone": "string | Nomor Whatsapp",
+    "address": "string | Alamat Rumah",
+    "sub_district": "string | Kecamatan",
+    "district": "string | Kabupaten/Kota",
+    "province": "string | Provinsi",
+    "postal_code": "string | Kode Pos"
+  },
+  "pondok_sebelumnya": {
+    "previous_pondok_name": "string | Nama Pondok Sebelumnya",
+    "previous_pondok_address": "string | Alamat Pondok Sebelumnya (Kota/Kabupaten)",
+    "previous_pondok_div": "string | Jabatan di Pondok Sebelumnya",
+    "previous_pondok_time": "string | Lama di Pondok Sebelumnya (bulan/tahun)"
+  },
+  "kependudukan": {
+    "nik": "string | NIK (16 digit)",
+    "no_kk": "string | No KK (16 digit)",
+    "nisn": "string | NISN (10 digit)",
+    "no_kip": "string | No KIP (6 digit, opsional)",
+    "no_kks": "string | No KKS (6 digit, opsional)",
+    "no_pkh": "string | No PKH (6 digit, opsional)"
+  },
+  "pendidikan": {
+    "workplace": "string | Universitas/Sekolah",
+    "department": "string | Jurusan"
+  },
+  "data_keluarga": {
+    "home_status": "enum | Status Rumah (Tinggal bersama orang tua/wali, Ikut saudara/kerabat, Kontrak/kost, Rumah singgah, Panti asuhan, Asrama bukan milik lembaga, Asrama milik lembaga)",
+    "ayah": {
+      "father": "string | Nama Ayah",
+      "father_pn": "string | Nomor WA/HP Ayah",
+      "father_nik": "string | NIK Ayah",
+      "father_job": "string | Pekerjaan Ayah",
+      "father_graduate": "string | Pendidikan Ayah",
+      "father_income": "enum | Pendapatan Ayah (/bulan) (≤ Rp. 500.000, Rp. 500.001 - Rp. 1.000.000, Rp. 1.000.001 - Rp. 2.000.000, Rp. 2.000.001 - Rp. 3.000.000, Rp. 4.000.001 - Rp. 5.000.000, ≥ Rp. 5.000.000)"
+    },
+    "ibu": {
+      "mother": "string | Nama Ibu",
+      "mother_pn": "string | Nomor WA/HP Ibu",
+      "mother_nik": "string | NIK Ibu",
+      "mother_job": "string | Pekerjaan Ibu",
+      "mother_graduate": "string | Pendidikan Ibu",
+      "mother_income": "enum | Pendapatan Ibu (/bulan) (≤ Rp. 500.000, Rp. 500.001 - Rp. 1.000.000, Rp. 1.000.001 - Rp. 2.000.000, Rp. 2.000.001 - Rp. 3.000.000, Rp. 4.000.001 - Rp. 5.000.000, ≥ Rp. 5.000.000)"
+    },
+    "wali": {
+      "guardian_relationship": "string | Hubungan Dengan Wali (opsional)",
+      "guardian": "string | Nama Wali (opsional)",
+      "guardian_pn": "string | Nomor WA/HP Wali (opsional)",
+      "guardian_nik": "string | NIK Wali (opsional)",
+      "guardian_job": "string | Pekerjaan Wali (opsional)",
+      "guardian_graduate": "string | Pendidikan Wali (opsional)",
+      "guardian_income": "enum | Pendapatan Wali (/bulan, opsional) (≤ Rp. 500.000, Rp. 500.001 - Rp. 1.000.000, Rp. 1.000.001 - Rp. 2.000.000, Rp. 2.000.001 - Rp. 3.000.000, Rp. 4.000.001 - Rp. 5.000.000, ≥ Rp. 5.000.000)"
+    }
+  },
+  "dokumen": {
+    "path_doc": "file | PDF (Scan Surat Pernyataan + KTP + KK, maks 1MB)"
+  },
+  "mutasi_emis": {
+    "path_mutasi_emis": "file | PDF (Surat Mutasi Emis, maks 1MB)"
+  },
+  "pembayaran": {
+    "path_bill": "file | image/PDF (Bukti Pembayaran, maks 1MB)"
+  },
+  "foto_profil": {
+    "path_photo": "file | PNG/JPG (Foto Profil, maks 1MB)"
+  },
+  "endpoints": {
+    "update_profile": {
+      "method": "POST",
+      "path": "/user/{id}",
+      "sections": ["data_pribadi", "kontak", "pondok_sebelumnya", "kependudukan", "pendidikan", "data_keluarga"]
+    },
+    "upload_dokumen": {
+      "method": "POST",
+      "path": "/doc/{id}"
+    },
+    "upload_mutasi": {
+      "method": "POST",
+      "path": "/mutasi/{id}"
+    },
+    "upload_pembayaran": {
+      "method": "POST",
+      "path": "/bill/{id}"
+    },
+    "upload_foto": {
+      "method": "POST",
+      "path": "/photo/{id}"
+    },
+    "print_formulir": {
+      "method": "GET",
+      "path": "/print/{encrypted_id}",
+      "auth_required": true
+    }
+  }
+}

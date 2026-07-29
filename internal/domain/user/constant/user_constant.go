@@ -43,6 +43,7 @@ const (
 	CodeUserAlreadyBanned            domainerr.Code = "DOMAIN_USER_ALREADY_BANNED"
 	CodeUserAlreadyActive             domainerr.Code = "DOMAIN_USER_ALREADY_ACTIVE"
 	CodeUserDuplicate                 domainerr.Code = "DOMAIN_USER_DUPLICATE"
+	CodeInvalidNISFormat              domainerr.Code = "DOMAIN_INVALID_NIS_FORMAT"
 )
 
 type CredentialType string
@@ -57,6 +58,7 @@ const (
 	LoginIdentifierEmail    LoginIdentifierKind = "EMAIL"
 	LoginIdentifierPhone    LoginIdentifierKind = "PHONE"
 	LoginIdentifierUsername LoginIdentifierKind = "USERNAME"
+	LoginIdentifierNIS      LoginIdentifierKind = "NIS"
 )
 
 type LoginIdentityStatus string
